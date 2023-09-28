@@ -31,8 +31,8 @@ body:
       label: PHP Version
       description: What version of PHP are you running?
       options:
-        - 8.1
-        - 8.2
+        - '8.1'
+        - '8.2'
     validations:
       required: true
   - type: dropdown

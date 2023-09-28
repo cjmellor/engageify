@@ -1,5 +1,67 @@
 {
-  "require": {
-    "laravel/prompts": "^0.1.6"
-  }
+    "name": "cjmellor/engageify",
+    "description": "Easily add engagement features like likes, dislikes, upvotes, and downvotes to your models, paving the way for richer user interactions in your application",
+    "keywords": [
+        "laravel",
+        "engageify"
+    ],
+    "homepage": "https://github.com/cjmellor/engageify",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Chris Mellor",
+            "email": "chris@mellor.pizza"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/contracts": "^10.0",
+        "spatie/laravel-package-tools": "^1.14"
+    },
+    "require-dev": {
+        "nunomaduro/collision": "^7.0",
+        "orchestra/testbench": "^8.0",
+        "phpunit/phpunit": "^10.0",
+        "pestphp/pest": "^2.0",
+        "pestphp/pest-plugin-arch": "^2.0",
+        "pestphp/pest-plugin-laravel": "^2.0",
+        "laravel/pint": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cjmellor\\Engageify\\": "src/",
+            "Cjmellor\\Engageify\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cjmellor\\Engageify\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyze": "vendor/bin/phpstan analyse",
+        "lint": "vendor/bin/pint",
+        "format": "vendor/bin/rector process",
+        "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
+        "test": "vendor/bin/phpunit",
+        "pest": "vendor/bin/pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Cjmellor\\Engageify\\EngageifyServiceProvider"
+            ],
+            "aliases": {
+                "Engageify": "Cjmellor\\Engageify\\Facades\\Engageify"
+            }
+        },
+        "minimum-stability": "stable",
+        "prefer-stable": true
+    }
 }
