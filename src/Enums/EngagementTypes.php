@@ -2,7 +2,10 @@
 
 namespace Cjmellor\Engageify\Enums;
 
-enum EngagementTypes
+enum EngagementTypes: string
 {
-    case Like;
+    case Like = 'like';
+    case Dislike = 'dislike';
+    case Upvote = 'upvote';
+    case Downvote = 'downvote';
 }

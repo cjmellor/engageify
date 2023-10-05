@@ -2,8 +2,7 @@
 
 namespace Cjmellor\Engageify\Models;
 
-use Cjmellor\Engageify\Database\Factories\EngagementFactory;
-use Illuminate\Database\Eloquent\Factories\Factory;
+use Cjmellor\Engageify\Enums\EngagementTypes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +11,10 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class Engagement extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'type' => EngagementTypes::class,
+    ];
 
     protected $guarded = [];
 
@@ -25,8 +28,8 @@ class Engagement extends Model
         return $this->belongsTo(config(key: 'engageify.users.model'));
     }
 
-//    public function newFactory(): Factory
-//    {
-//        return EngagementFactory::new();
-//    }
+    //    public function newFactory(): Factory
+    //    {
+    //        return EngagementFactory::new();
+    //    }
 }
