@@ -1,0 +1,2 @@
+providers:
+  - Cjmellor\Engageify\EngageifyServiceProvider

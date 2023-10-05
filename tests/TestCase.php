@@ -2,33 +2,25 @@
 
 namespace Cjmellor\Engageify\Tests;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Cjmellor\Engageify\EngageifyServiceProvider;
 
 class TestCase extends Orchestra
 {
-    protected function setUp(): void
+    use RefreshDatabase;
+    use WithWorkbench;
+
+    protected function defineEnvironment($app): void
     {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Cjmellor\\Engageify\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
-    }
-
-    protected function getPackageProviders($app)
-    {
-        return [
-            EngageifyServiceProvider::class,
-        ];
-    }
-
-    public function getEnvironmentSetUp($app)
-    {
-        config()->set('database.default', 'testing');
-
-        // $migration = include __DIR__.'/../database/migrations/MIGRATION.php';
-        // $migration->up();
+        tap($app['config'], function (Repository $config) {
+            $config->set('database.default', 'testbench');
+            $config->set('database.connections.testbench', [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+            ]);
+        });
     }
 }
