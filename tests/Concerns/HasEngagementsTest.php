@@ -139,7 +139,7 @@ test(description: 'when a Model is Engaged, the appropriate Event will run', clo
     // Engage with the Model
     $this->user->{$type}();
 
-    $eventName = sprintf("Cjmellor\\Engageify\\Events\\Model%sdEvent", ucfirst($type));
+    $eventName = sprintf('Cjmellor\\Engageify\\Events\\Model%sdEvent', ucfirst($type));
 
     // Assert the event ran
     Event::assertDispatched(event: $eventName);
@@ -160,7 +160,7 @@ test('events return with data', closure: function (string $type): void {
     // Engage with the Model
     $this->user->{$type}();
 
-    $eventName = sprintf("Cjmellor\\Engageify\\Events\\Model%sdEvent", ucfirst($type));
+    $eventName = sprintf('Cjmellor\\Engageify\\Events\\Model%sdEvent', ucfirst($type));
 
     // Assert the event ran and returned the correct data
     Event::assertDispatched(event: $eventName, callback: function ($event): bool {

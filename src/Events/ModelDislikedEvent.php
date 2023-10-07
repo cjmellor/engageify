@@ -14,7 +14,7 @@ class ModelDislikedEvent
         public Model $user,
         public Model $engageable,
         public Engagement $engagement,
-    )
-    {
+    ) {
+        //
     }
 }
