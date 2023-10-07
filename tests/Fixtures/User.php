@@ -3,12 +3,13 @@
 namespace Cjmellor\Engageify\Tests\Fixtures;
 
 use Cjmellor\Engageify\Concerns\HasEngagements;
+use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Tests\Fixtures\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Model
+class User extends Authenticatable
 {
     use HasEngagements;
     use HasFactory;
