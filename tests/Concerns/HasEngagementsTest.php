@@ -4,9 +4,11 @@ use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Tests\Fixtures\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
-test(description: 'a Model can be engaged', closure: function (string $type) {
+test(description: 'a Model can be engaged', closure: function (string $type): void {
     // A User must be authenticated
     $this->actingAs($this->user);
 
@@ -35,7 +37,7 @@ test(description: 'a non-logged in User cannot engage with a Model')
     // Exception should be thrown
     ->throws(Exception::class);
 
-test(description: 'a User cannot engage with a Model twice', closure: function (string $type) {
+test(description: 'a User cannot engage with a Model twice', closure: function (string $type): void {
     // Turn off multiple engagements
     config(['engageify.allow_multiple_engagements' => false]);
 
@@ -53,7 +55,7 @@ test(description: 'a User cannot engage with a Model twice', closure: function (
     // The custom Exception should be thrown with a message
 ])->throws(exception: UserCannotEngageException::class, exceptionMessage: 'This model has already been engaged');
 
-it(description: 'counts the correct number of engagements', closure: function (string $type) {
+it(description: 'counts the correct number of engagements', closure: function (string $type): void {
     // Turn on multiple engagements
     config(['engageify.allow_multiple_engagements' => true]);
 
@@ -74,7 +76,7 @@ it(description: 'counts the correct number of engagements', closure: function (s
     EngagementTypes::Downvote->value,
 ]);
 
-test(description: 'a Model that has been liked, can be disliked', closure: function () {
+test(description: 'a Model that has been liked, can be disliked', closure: function (): void {
     // A User must be authenticated
     $this->actingAs($this->user);
 
@@ -90,7 +92,7 @@ test(description: 'a Model that has been liked, can be disliked', closure: funct
     $this->assertDatabaseCount(table: Engagement::class, count: 0);
 });
 
-test(description: 'a Like can be toggled', closure: function () {
+test(description: 'a Like can be toggled', closure: function (): void {
     // A User must be authenticated
     $this->actingAs($this->user);
 
@@ -106,7 +108,7 @@ test(description: 'a Like can be toggled', closure: function () {
     $this->assertDatabaseCount(table: Engagement::class, count: 0);
 });
 
-it(description: 'retrieves engagement counts from the cache', closure: function () {
+it(description: 'retrieves engagement counts from the cache', closure: function (): void {
     // Turn caching on
     config(['engageify.allow_caching' => true]);
 
@@ -126,3 +128,84 @@ it(description: 'retrieves engagement counts from the cache', closure: function 
     // Retrieve the engagement count again, which should be retrieved from the cache
     expect($this->user)->likes()->toBe(expected: 1);
 });
+
+test(description: 'when a Model is Engaged, the appropriate Event will run', closure: function (string $type): void {
+    // Using Events, so fake them
+    Event::fake();
+
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Engage with the Model
+    $this->user->{$type}();
+
+    $eventName = sprintf("Cjmellor\\Engageify\\Events\\Model%sdEvent", ucfirst($type));
+
+    // Assert the event ran
+    Event::assertDispatched(event: $eventName);
+})->with([
+    EngagementTypes::Like->value,
+    EngagementTypes::Dislike->value,
+    EngagementTypes::Upvote->value,
+    EngagementTypes::Downvote->value,
+]);
+
+test('events return with data', closure: function (string $type): void {
+    // Using Events, so fake them
+    Event::fake();
+
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Engage with the Model
+    $this->user->{$type}();
+
+    $eventName = sprintf("Cjmellor\\Engageify\\Events\\Model%sdEvent", ucfirst($type));
+
+    // Assert the event ran and returned the correct data
+    Event::assertDispatched(event: $eventName, callback: function ($event): bool {
+        return $event->user->is($this->user)
+            && $event->engageable->is($this->user)
+            && $event->engagement->engagementable->is($this->user);
+    });
+})->with([
+    EngagementTypes::Like->value,
+    EngagementTypes::Dislike->value,
+    EngagementTypes::Upvote->value,
+    EngagementTypes::Downvote->value,
+]);
+
+test(description: 'retrieve unique list of Users\' who engaged with a Model', closure: function (string $type) {
+    // Turn on multiple engagements
+    config(['engageify.allow_multiple_engagements' => true]);
+
+    // Config the User model
+    config(['engageify.users.model' => User::class]);
+
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Generate a second User
+    $user2 = User::factory()->createOne();
+
+    // User one engages with the Model
+    $this->user->{$type}();
+
+    // Now login as User two
+    $this->actingAs($user2);
+
+    // User two engaged with User one, twice (to check uniqueness)
+    $this->user->{$type}();
+    $this->user->{$type}();
+
+    $types = $type.'s';
+
+    // Show the Users' who liked Model one and should be an instance of Collection
+    expect($this->user)->{$types}(showUsers: true)->toBeInstanceOf(class: Collection::class)
+        ->and($this->user)->{$types}(showUsers: true)->toHaveCount(count: 2);
+})->with([
+    EngagementTypes::Like->value,
+    EngagementTypes::Dislike->value,
+    EngagementTypes::Upvote->value,
+    EngagementTypes::Downvote->value,
+]);
