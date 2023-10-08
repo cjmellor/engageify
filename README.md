@@ -6,7 +6,7 @@
 
 Engageify is a Laravel package that allows you to integrate engagement features like user reactions (likes, upvotes) to your models.
 
-![](https://banners.beyondco.de/Engageify.png?theme=light&packageManager=composer+require&packageName=cjmellor%2Fengageify&pattern=brickWall&style=style_2&description=Integrate+user+engagement+to+your+models&md=1&showWatermark=0&fontSize=100px&images=thumbs-up&widths=300&heights=300)
+![Engagement Package GitHub Preview](https://github.com/cjmellor/engageify/assets/1848476/c1492612-a0a6-476d-93d5-e83ea2e825d8)
 
 ## Installation
 
