@@ -12,6 +12,8 @@ class TestCase extends Orchestra
         parent::setUp();
 
         $this->loadLaravelMigrations();
+
+        $this->loadMigrationsFrom(paths: __DIR__.'/../database/migrations');
     }
 
     protected function getPackageProviders($app): array
