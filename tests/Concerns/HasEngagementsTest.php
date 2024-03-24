@@ -5,7 +5,6 @@ use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Tests\Fixtures\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
 test(description: 'a Model can be engaged', closure: function (string $type): void {
