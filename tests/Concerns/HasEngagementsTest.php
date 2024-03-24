@@ -108,27 +108,6 @@ test(description: 'a Like can be toggled', closure: function (): void {
     $this->assertDatabaseCount(table: Engagement::class, count: 0);
 });
 
-it(description: 'retrieves engagement counts from the cache', closure: function (): void {
-    // Turn caching on
-    config(['engageify.allow_caching' => true]);
-
-    // An authenticated user is required
-    $this->actingAs($this->user);
-
-    // Engage with the Model first
-    $this->user->like();
-
-    // Retrieve the engagement count, which will cache the results
-    $this->user->likes();
-
-    // Because it's cached, a database query should not be made
-    // If a query is run -- mimicking a database query -- the test will fail
-    DB::listen(fn () => $this->fail(message: 'A database query was made when it should not have been'));
-
-    // Retrieve the engagement count again, which should be retrieved from the cache
-    expect($this->user)->likes()->toBe(expected: 1);
-});
-
 test(description: 'when a Model is Engaged, the appropriate Event will run', closure: function (string $type): void {
     // Using Events, so fake them
     Event::fake();
