@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.0.1 - 2025-07-26
+
+### What's Changed
+
+* build(deps): Bump dependabot/fetch-metadata from 1.6.0 to 2.0.0 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/5
+* build(deps): Bump aglipanci/laravel-pint-action from 2.3.1 to 2.4 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/6
+* build(deps): Bump dependabot/fetch-metadata from 2.0.0 to 2.1.0 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/7
+* build(deps): Bump dependabot/fetch-metadata from 2.1.0 to 2.2.0 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/8
+* build(deps): Bump dependabot/fetch-metadata from 2.2.0 to 2.3.0 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/9
+* build(deps): Bump aglipanci/laravel-pint-action from 2.4 to 2.5 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/10
+* build(deps): Bump dependabot/fetch-metadata from 2.3.0 to 2.4.0 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/11
+* build(deps): Bump stefanzweifel/git-auto-commit-action from 5 to 6 by @dependabot[bot] in https://github.com/cjmellor/engageify/pull/12
+
+**Full Changelog**: https://github.com/cjmellor/engageify/compare/v1.0.0...v1.0.1
+
 ## v1.0.0 - 2024-03-24
 
 ### What's Changed
