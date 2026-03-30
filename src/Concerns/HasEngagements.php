@@ -10,6 +10,7 @@ use Cjmellor\Engageify\Events\ModelLikedEvent;
 use Cjmellor\Engageify\Events\ModelUpvotedEvent;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
+use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
@@ -57,7 +58,7 @@ trait HasEngagements
 
     public function engagements(): MorphMany
     {
-        /** @var \Illuminate\Database\Eloquent\Concerns\HasRelationships $this */
+        /** @var HasRelationships $this */
         return $this->morphMany(related: Engagement::class, name: 'engagementable');
     }
 

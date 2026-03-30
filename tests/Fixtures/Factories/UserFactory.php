@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 /**
  * @template TModel of \Cjmellor\Engageify\Tests\Fixtures\User
  *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<TModel>
+ * @extends Factory<TModel>
  */
 class UserFactory extends Factory
 {

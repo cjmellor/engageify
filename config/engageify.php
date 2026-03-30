@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -11,7 +13,7 @@ return [
     */
     'users' => [
         'foreign_key' => 'user_id',
-        'model' => App\Models\User::class,
+        'model' => User::class,
         'table' => 'users',
     ],
 
