@@ -141,11 +141,9 @@ test('events return with data', closure: function (string $type): void {
     $eventName = sprintf('Cjmellor\\Engageify\\Events\\Model%sdEvent', ucfirst($type));
 
     // Assert the event ran and returned the correct data
-    Event::assertDispatched(event: $eventName, callback: function ($event): bool {
-        return $event->user->is($this->user)
-            && $event->engageable->is($this->user)
-            && $event->engagement->engagementable->is($this->user);
-    });
+    Event::assertDispatched(event: $eventName, callback: fn ($event): bool => $event->user->is($this->user)
+        && $event->engageable->is($this->user)
+        && $event->engagement->engagementable->is($this->user));
 })->with([
     EngagementTypes::Like->value,
     EngagementTypes::Dislike->value,
@@ -153,7 +151,7 @@ test('events return with data', closure: function (string $type): void {
     EngagementTypes::Downvote->value,
 ]);
 
-test(description: 'retrieve unique list of Users\' who engaged with a Model', closure: function (string $type) {
+test(description: 'retrieve unique list of Users\' who engaged with a Model', closure: function (string $type): void {
     // Turn on multiple engagements
     config(['engageify.allow_multiple_engagements' => true]);
 
@@ -187,3 +185,52 @@ test(description: 'retrieve unique list of Users\' who engaged with a Model', cl
     EngagementTypes::Upvote->value,
     EngagementTypes::Downvote->value,
 ]);
+
+test(description: 'engagement counts are cached when caching is enabled', closure: function (): void {
+    // Turn on caching
+    config(['engageify.allow_caching' => true]);
+
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Engage with the Model
+    $this->user->like();
+
+    $cacheKey = "engagements.like.{$this->user->id}";
+
+    // The count has not been cached until it is first retrieved
+    expect(cache()->has(key: $cacheKey))->toBeFalse();
+
+    // Retrieving the count caches it
+    expect($this->user->likes())->toBe(expected: 1)
+        ->and(cache()->has(key: $cacheKey))->toBeTrue();
+});
+
+test(description: 'the cached count is cleared when a new engagement is made', closure: function (): void {
+    // Turn on caching and allow multiple engagements
+    config(['engageify.allow_caching' => true]);
+    config(['engageify.allow_multiple_engagements' => true]);
+
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Engage, then prime the cache
+    $this->user->like();
+    expect($this->user->likes())->toBe(expected: 1);
+
+    // A new engagement clears the cache, so the fresh count is returned
+    $this->user->like();
+    expect($this->user->likes())->toBe(expected: 2);
+});
+
+test(description: 'toggleLike likes a Model that has not been liked yet', closure: function (): void {
+    // A User must be authenticated
+    $this->actingAs($this->user);
+
+    // Toggle the Like on a Model with no existing engagement
+    $this->user->toggleLike();
+
+    // The Model should now be liked
+    expect($this->user)->likes()->toBe(expected: 1);
+    $this->assertDatabaseCount(table: Engagement::class, count: 1);
+});

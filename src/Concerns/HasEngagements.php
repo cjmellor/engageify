@@ -10,6 +10,7 @@ use Cjmellor\Engageify\Events\ModelLikedEvent;
 use Cjmellor\Engageify\Events\ModelUpvotedEvent;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
+use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
@@ -24,8 +25,9 @@ trait HasEngagements
     protected function engage(EngagementTypes $type): Model
     {
         throw_if(
-            condition: config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type),
-            exception: new UserCannotEngageException(message: 'This model has already been engaged')
+            config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type),
+            UserCannotEngageException::class,
+            'This model has already been engaged'
         );
 
         if (config(key: 'engageify.allow_caching')) {
@@ -38,10 +40,10 @@ trait HasEngagements
         ]);
 
         match ($type) {
-            EngagementTypes::Like => ModelLikedEvent::dispatch(auth()->user(), $this, $engagement),
-            EngagementTypes::Dislike => ModelDislikedEvent::dispatch(auth()->user(), $this, $engagement),
-            EngagementTypes::Upvote => ModelUpvotedEvent::dispatch(auth()->user(), $this, $engagement),
-            EngagementTypes::Downvote => ModelDownvotedEvent::dispatch(auth()->user(), $this, $engagement),
+            EngagementTypes::Like => event(new ModelLikedEvent(auth()->user(), $this, $engagement)),
+            EngagementTypes::Dislike => event(new ModelDislikedEvent(auth()->user(), $this, $engagement)),
+            EngagementTypes::Upvote => event(new ModelUpvotedEvent(auth()->user(), $this, $engagement)),
+            EngagementTypes::Downvote => event(new ModelDownvotedEvent(auth()->user(), $this, $engagement)),
         };
 
         return $engagement;
@@ -57,7 +59,7 @@ trait HasEngagements
 
     public function engagements(): MorphMany
     {
-        /** @var \Illuminate\Database\Eloquent\Concerns\HasRelationships $this */
+        /** @var HasRelationships $this */
         return $this->morphMany(related: Engagement::class, name: 'engagementable');
     }
 
@@ -83,27 +85,21 @@ trait HasEngagements
 
     protected function getEngagementCount(EngagementTypes $type, $showUsers = false): Collection|int
     {
-        if (config(key: 'engageify.allow_caching')) {
-            return cache()->remember(
-                key: $this->getEngagementCacheKey($type),
-                ttl: config(key: 'engageify.cache_duration'),
-                callback: fn () => $this->engagementCount(type: $type)
-            );
-        }
-
         if ($showUsers) {
-            // If caching is enabled, you might still be only seeing the cached count
-            // This is because the cache is only cleared when an engagement is made
-            if (config(key: 'engageify.allow_caching')) {
-                cache()->forget(key: $this->getEngagementCacheKey($type));
-            }
-
             return $this->engagements()
                 ->with(relations: 'user')
                 ->whereType($type)
                 ->get()
                 ->pluck('user')
                 ->when(config(key: 'engageify.allow_multiple_engagements'), fn ($users) => $users->unique());
+        }
+
+        if (config(key: 'engageify.allow_caching')) {
+            return cache()->remember(
+                key: $this->getEngagementCacheKey($type),
+                ttl: config(key: 'engageify.cache_duration'),
+                callback: fn () => $this->engagementCount(type: $type)
+            );
         }
 
         return $this->engagementCount(type: $type);
@@ -150,7 +146,7 @@ trait HasEngagements
             ->whereType($type)
             ->delete();
 
-        ModelDisengagedEvent::dispatch(auth()->user(), $this);
+        event(new ModelDisengagedEvent(auth()->user(), $this));
     }
 
     public function like(): Model

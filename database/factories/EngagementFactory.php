@@ -21,28 +21,28 @@ class EngagementFactory extends Factory
 
     public function like(): Factory
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'type' => 'like',
         ]);
     }
 
     public function dislike(): Factory
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'type' => 'dislike',
         ]);
     }
 
     public function upvote(): Factory
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'type' => 'upvote',
         ]);
     }
 
     public function downvote(): Factory
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes): array => [
             'type' => 'downvote',
         ]);
     }

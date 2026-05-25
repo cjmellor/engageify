@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cjmellor\Engageify\Events;
 
 use Illuminate\Database\Eloquent\Model;

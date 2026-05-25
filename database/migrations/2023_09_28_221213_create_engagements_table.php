@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('engagements', function (Blueprint $table) {
+        Schema::create('engagements', function (Blueprint $table): void {
             $table->id();
             $table->morphs(name: 'engagementable');
             $table->foreignId(column: $config = config(key: 'engageify.users.foreign_key', default: 'user_id'))->constrained(config(key: 'engageify.users.table'))->cascadeOnDelete();
