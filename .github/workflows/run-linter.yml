@@ -9,12 +9,12 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Lint with Pint
-        uses: aglipanci/laravel-pint-action@2.3.1
+        uses: aglipanci/laravel-pint-action@61f2bc4f4d5da076029d370fa2f268fd6b298041 # 2.3.1
 
       - name: Commit linted files
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: "fix: Files linted with Pint"
