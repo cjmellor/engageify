@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cjmellor\Engageify\Models;
 
 use Cjmellor\Engageify\Enums\EngagementTypes;
@@ -27,9 +29,4 @@ class Engagement extends Model
     {
         return $this->belongsTo(config(key: 'engageify.users.model'));
     }
-
-    //    public function newFactory(): Factory
-    //    {
-    //        return EngagementFactory::new();
-    //    }
 }

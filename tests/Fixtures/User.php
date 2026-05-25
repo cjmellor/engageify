@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cjmellor\Engageify\Tests\Fixtures;
 
 use Cjmellor\Engageify\Concerns\HasEngagements;

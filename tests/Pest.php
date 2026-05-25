@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Cjmellor\Engageify\Tests\Fixtures\User;
 use Cjmellor\Engageify\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;

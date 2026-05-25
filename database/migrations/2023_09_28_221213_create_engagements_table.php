@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +17,6 @@ return new class extends Migration
             $table->enum(column: 'type', allowed: ['like', 'dislike', 'upvote', 'downvote']);
             $table->timestamps();
 
-            // Indexes
             $table->index(columns: 'type');
             $table->index(columns: $config);
         });

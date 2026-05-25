@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cjmellor\Engageify\Concerns;
 
 use Cjmellor\Engageify\Enums\EngagementTypes;
@@ -20,6 +22,59 @@ trait HasEngagements
     public function dislike(): Model
     {
         return $this->engage(type: EngagementTypes::Dislike);
+    }
+
+    public function engagements(): MorphMany
+    {
+        /** @var HasRelationships $this */
+        return $this->morphMany(related: Engagement::class, name: 'engagementable');
+    }
+
+    public function upvote(): Model
+    {
+        return $this->engage(type: EngagementTypes::Upvote);
+    }
+
+    public function downvote(): Model
+    {
+        return $this->engage(type: EngagementTypes::Downvote);
+    }
+
+    public function likes($showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: EngagementTypes::Like, showUsers: $showUsers);
+    }
+
+    public function dislikes($showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: EngagementTypes::Dislike, showUsers: $showUsers);
+    }
+
+    public function upvotes($showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: EngagementTypes::Upvote, showUsers: $showUsers);
+    }
+
+    public function downvotes($showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: EngagementTypes::Downvote, showUsers: $showUsers);
+    }
+
+    public function toggleLike(): void
+    {
+        $this->hasEngagedWithType(type: EngagementTypes::Like)
+            ? $this->unlike()
+            : $this->like();
+    }
+
+    public function unlike(): void
+    {
+        $this->disengage(type: EngagementTypes::Like);
+    }
+
+    public function like(): Model
+    {
+        return $this->engage(type: EngagementTypes::Like);
     }
 
     protected function engage(EngagementTypes $type): Model
@@ -57,30 +112,9 @@ trait HasEngagements
             ->exists();
     }
 
-    public function engagements(): MorphMany
-    {
-        /** @var HasRelationships $this */
-        return $this->morphMany(related: Engagement::class, name: 'engagementable');
-    }
-
     protected function getEngagementCacheKey(EngagementTypes $type): string
     {
         return "engagements.$type->value.$this->id";
-    }
-
-    public function upvote(): Model
-    {
-        return $this->engage(type: EngagementTypes::Upvote);
-    }
-
-    public function downvote(): Model
-    {
-        return $this->engage(type: EngagementTypes::Downvote);
-    }
-
-    public function likes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Like, showUsers: $showUsers);
     }
 
     protected function getEngagementCount(EngagementTypes $type, $showUsers = false): Collection|int
@@ -112,33 +146,6 @@ trait HasEngagements
             ->count();
     }
 
-    public function dislikes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Dislike, showUsers: $showUsers);
-    }
-
-    public function upvotes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Upvote, showUsers: $showUsers);
-    }
-
-    public function downvotes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Downvote, showUsers: $showUsers);
-    }
-
-    public function toggleLike(): void
-    {
-        $this->hasEngagedWithType(type: EngagementTypes::Like)
-            ? $this->unlike()
-            : $this->like();
-    }
-
-    public function unlike(): void
-    {
-        $this->disengage(type: EngagementTypes::Like);
-    }
-
     protected function disengage(EngagementTypes $type): void
     {
         $this->engagements()
@@ -147,10 +154,5 @@ trait HasEngagements
             ->delete();
 
         event(new ModelDisengagedEvent(auth()->user(), $this));
-    }
-
-    public function like(): Model
-    {
-        return $this->engage(type: EngagementTypes::Like);
     }
 }

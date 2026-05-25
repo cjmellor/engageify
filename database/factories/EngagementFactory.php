@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cjmellor\Engageify\Database\Factories;
 
 use Cjmellor\Engageify\Models\Engagement;
