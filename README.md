@@ -137,6 +137,50 @@ Both throw an `EngagementValueException` on a binary Verb, which carries no valu
 
 > Upgrading from v1? The `value` column ships as an additive migration — publish it with `php artisan vendor:publish --tag="engageify-migrations"` and run `php artisan migrate`.
 
+### Exclusive Groups (vote-style)
+
+For mutually-exclusive Verbs — upvote/downvote, or a single-choice reaction — implement `Cjmellor\Engageify\Contracts\Exclusive` and return a shared `group()` key. Several independent Groups can live in one enum:
+
+```php
+use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\Exclusive;
+use Cjmellor\Engageify\Contracts\HasWeight;
+
+enum Vote: string implements EngagementType, Exclusive, HasWeight
+{
+    case Up = 'up';
+    case Down = 'down';
+
+    public function group(): string
+    {
+        return 'vote';
+    }
+
+    public function weight(): int
+    {
+        return match ($this) {
+            self::Up => 1,
+            self::Down => -1,
+        };
+    }
+}
+```
+
+Recording an Exclusive Verb atomically clears any existing engagement by the same user whose Verb shares the group, then records the new one — so a user can never hold two members of a group at once, even under concurrent requests:
+
+```php
+$post->engage(Vote::Down); // down
+$post->engage(Vote::Up);   // switches: down removed, up recorded (one transaction)
+$post->engage(Vote::Up);   // re-recording the active member toggles it off
+```
+
+Switching fires a `Disengaged` event for the cleared member and an `Engaged` event for the new one. Read a Group with `netScore()` (summed weights — a Reddit-style score) and `breakdown()` (per-member counts — handy for a reaction bar):
+
+```php
+$post->netScore('vote');   // e.g. 42
+$post->breakdown('vote');  // ['up' => 50, 'down' => 8]
+```
+
 ### "Like" Specific Reaction
 
 The "like" reaction has some additional functionality. A "like" can be "unliked". This shouldn't be confused with a "dislike" as a "dislike" counts as an engagement, whereas an "unlike" is deleting the engagement.
