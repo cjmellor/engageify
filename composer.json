@@ -6,6 +6,10 @@
         "engageify"
     ],
     "homepage": "https://github.com/cjmellor/engageify",
+    "support": {
+        "issues": "https://github.com/cjmellor/engageify/issues",
+        "source": "https://github.com/cjmellor/engageify"
+    },
     "license": "MIT",
     "authors": [
         {
@@ -15,6 +19,7 @@
     ],
     "require": {
         "php": "^8.3",
+        "illuminate/database": "^12.0|^13.0",
         "illuminate/support": "^12.0|^13.0"
     },
     "require-dev": {
@@ -42,14 +47,20 @@
         }
     },
     "scripts": {
-        "analyze": "vendor/bin/phpstan analyse",
-        "lint": "vendor/bin/pint",
-        "format": "vendor/bin/rector process",
-        "format:dry": "vendor/bin/rector process --dry-run",
         "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
-        "test": "vendor/bin/pest",
-        "test-coverage": "vendor/bin/pest --coverage --min=100",
-        "test:type-coverage": "vendor/bin/pest --type-coverage --min=100"
+        "test:lint": [
+            "pint --parallel --test",
+            "rector --dry-run"
+        ],
+        "test:type-coverage": "vendor/bin/pest --type-coverage --min=100",
+        "test:types": "vendor/bin/phpstan",
+        "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0",
+        "test": [
+            "@test:lint",
+            "@test:type-coverage",
+            "@test:types",
+            "@test:unit"
+        ]
     },
     "config": {
         "allow-plugins": {
@@ -64,6 +75,6 @@
             ]
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }
