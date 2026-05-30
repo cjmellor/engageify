@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Cjmellor\Engageify\Enums\EngagementTypes;
+use Cjmellor\Engageify\Events\Disengaged;
+use Cjmellor\Engageify\Events\Engaged;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Tests\Fixtures\User;
@@ -85,34 +87,16 @@ test(description: 'a Like can be toggled', closure: function (): void {
     $this->assertDatabaseCount(table: Engagement::class, count: 0);
 });
 
-test(description: 'when a Model is Engaged, the appropriate Event will run', closure: function (string $type): void {
+test(description: 'engaging a Model dispatches the generic Engaged event carrying the actor, engageable, Verb and engagement', closure: function (string $type): void {
     Event::fake();
 
     $this->actingAs($this->user);
 
     $this->user->{$type}();
 
-    $eventName = sprintf('Cjmellor\\Engageify\\Events\\Model%sdEvent', ucfirst($type));
-
-    Event::assertDispatched(event: $eventName);
-})->with([
-    EngagementTypes::Like->value,
-    EngagementTypes::Dislike->value,
-    EngagementTypes::Upvote->value,
-    EngagementTypes::Downvote->value,
-]);
-
-test('events return with data', closure: function (string $type): void {
-    Event::fake();
-
-    $this->actingAs($this->user);
-
-    $this->user->{$type}();
-
-    $eventName = sprintf('Cjmellor\\Engageify\\Events\\Model%sdEvent', ucfirst($type));
-
-    Event::assertDispatched(event: $eventName, callback: fn ($event): bool => $event->user->is($this->user)
+    Event::assertDispatched(event: Engaged::class, callback: fn (Engaged $event): bool => $event->actor->is($this->user)
         && $event->engageable->is($this->user)
+        && $event->type === EngagementTypes::from($type)
         && $event->engagement->engagementable->is($this->user));
 })->with([
     EngagementTypes::Like->value,
@@ -120,6 +104,19 @@ test('events return with data', closure: function (string $type): void {
     EngagementTypes::Upvote->value,
     EngagementTypes::Downvote->value,
 ]);
+
+test(description: 'disengaging a Model dispatches the generic Disengaged event carrying the actor, engageable and Verb', closure: function (): void {
+    Event::fake();
+
+    $this->actingAs($this->user);
+
+    $this->user->like();
+    $this->user->unlike();
+
+    Event::assertDispatched(event: Disengaged::class, callback: fn (Disengaged $event): bool => $event->actor->is($this->user)
+        && $event->engageable->is($this->user)
+        && $event->type === EngagementTypes::Like);
+});
 
 test(description: 'retrieve unique list of Users\' who engaged with a Model', closure: function (string $type): void {
     config(['engageify.allow_multiple_engagements' => true]);
