@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Events;
 
-use Cjmellor\Engageify\Models\Engagement;
+use Cjmellor\Engageify\Contracts\EngagementType;
 use Illuminate\Database\Eloquent\Model;
 
-class ModelUpvotedEvent
+class Disengaged
 {
     public function __construct(
-        public Model $user,
+        public Model $actor,
         public Model $engageable,
-        public Engagement $engagement,
+        public EngagementType $type,
     ) {
         //
     }

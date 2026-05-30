@@ -7,3 +7,6 @@ parameters:
         - src
         - config
         - database
+        - tests/Fixtures
+    configDirectories:
+        - %currentWorkingDirectory%/config

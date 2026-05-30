@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Enums;
 
-enum EngagementTypes: string
+use Cjmellor\Engageify\Contracts\EngagementType;
+
+enum EngagementTypes: string implements EngagementType
 {
     case Like = 'like';
     case Dislike = 'dislike';
