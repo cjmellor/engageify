@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cjmellor\Engageify\Concerns;
 
 use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\Exclusive;
 use Cjmellor\Engageify\Contracts\HasWeight;
 use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Events\Disengaged;
@@ -16,6 +17,7 @@ use Cjmellor\Engageify\Support\TypeResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 trait HasEngagements
 {
@@ -83,6 +85,10 @@ trait HasEngagements
     {
         $type = TypeResolver::ensure(type: $type);
 
+        if ($type instanceof Exclusive) {
+            return $this->engageExclusive(type: $type, value: $value);
+        }
+
         throw_if(
             config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type),
             UserCannotEngageException::class,
@@ -137,6 +143,84 @@ trait HasEngagements
         return $this->engagements()
             ->whereType($type)
             ->count();
+    }
+
+    public function netScore(string $group): float
+    {
+        return (float) $this->engagements()
+            ->whereIn('type', $this->exclusiveGroupValues(group: $group))
+            ->sum(column: 'value');
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function breakdown(string $group): array
+    {
+        $rows = $this->engagements()
+            ->whereIn('type', $this->exclusiveGroupValues(group: $group))
+            ->toBase()
+            ->selectRaw('type, count(*) as aggregate')
+            ->groupBy('type')
+            ->get();
+
+        $breakdown = [];
+
+        foreach ($rows as $row) {
+            $breakdown[(string) $row->type] = (int) $row->aggregate;
+        }
+
+        return $breakdown;
+    }
+
+    protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
+    {
+        return DB::transaction(fn (): Engagement => $this->flipExclusive(type: $type, value: $value));
+    }
+
+    protected function flipExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
+    {
+        $existing = $this->engagements()
+            ->whereUserId(auth()->id())
+            ->whereIn('type', $this->exclusiveGroupValues(group: $type->group()))
+            ->lockForUpdate()
+            ->get();
+
+        $active = $existing->first(fn (Engagement $engagement): bool => $engagement->type === $type);
+
+        $existing->each(function (Engagement $engagement): void {
+            $engagement->delete();
+
+            event(new Disengaged(actor: auth()->user(), engageable: $this, type: $engagement->type));
+        });
+
+        if ($active instanceof Engagement) {
+            return $active;
+        }
+
+        $engagement = $this->engagements()->create([
+            'user_id' => auth()->id(),
+            'type' => $type,
+            'value' => $this->resolveEngagementValue(type: $type, value: $value),
+        ]);
+
+        event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
+
+        return $engagement;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function exclusiveGroupValues(string $group): array
+    {
+        $enum = TypeResolver::enum();
+
+        return collect($enum::cases())
+            ->filter(fn (EngagementType $case): bool => $case instanceof Exclusive && $case->group() === $group)
+            ->map(fn (EngagementType $case): string => $case->value)
+            ->values()
+            ->all();
     }
 
     protected function resolveEngagementValue(EngagementType $type, int|float|null $value): int|float|null
