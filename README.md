@@ -59,16 +59,42 @@ $post->upvote();
 $post->downvote();
 ```
 
-An **Event** is run on each reaction occurrence.
+A generic `Engaged` event is dispatched on each reaction, carrying the actor, the engaged Model, and the engagement Verb. See [Events](#events).
 
-- `ModelLikedEvent`
-- `ModelDislikedEvent`
-- `ModelUpvotedEvent`
-- `ModelDownvotedEvent`
-- 
 #### Multiple Reactions
 
 By default, a User can only react once to a Model. If you wish to allow multiple reactions, you can do so by setting the `engagement.allow_multiple_engagements` config value to `true`.
+
+### Custom Engagement Types
+
+The default Verbs (`like`, `dislike`, `upvote`, `downvote`) are cases of a string-backed enum. To add your own Verbs — without a migration — create an enum implementing `Cjmellor\Engageify\Contracts\EngagementType` and point the config at it:
+
+```php
+use Cjmellor\Engageify\Contracts\EngagementType;
+
+enum Reaction: string implements EngagementType
+{
+    case Bookmark = 'bookmark';
+    case Celebrate = 'celebrate';
+}
+```
+
+```php
+// config/engageify.php
+'types' => App\Enums\Reaction::class,
+```
+
+Engage with a custom Verb by passing the enum case:
+
+```php
+$post->engage(Reaction::Bookmark);
+
+$post->engagementCount(Reaction::Bookmark); // 1
+
+$post->disengage(Reaction::Bookmark);
+```
+
+Passing a Verb that does not belong to the configured enum throws an `UnknownEngagementType` exception.
 
 ### "Like" Specific Reaction
 
@@ -78,7 +104,7 @@ The "like" reaction has some additional functionality. A "like" can be "unliked"
 $comment->unlike();
 ```
 
-When a Model is "unliked", an **Event** is fired.
+When a Model is "unliked", a generic `Disengaged` event is fired.
 
 There is also a convenient `toggle()` method that will toggle between "like" and "unlike".
 
@@ -131,21 +157,23 @@ This works on all 4 fetch methods.
 
 ## Events
 
-Each engagement has an event that is fired when it occurs.
+Two generic events are dispatched for every engagement, regardless of the Verb.
 
-Here is an example of an Event when a Model is "liked". Each Event will return the same data
+`Cjmellor\Engageify\Events\Engaged` is dispatched when a Model is engaged:
 
 ```php
-public Model $user,
+public Model $actor,
 public Model $engageable,
+public EngagementType $type,
 public Engagement $engagement,
 ```
 
-When a Model is "unliked", a `ModelDisengagedEvent` is fired.
+`Cjmellor\Engageify\Events\Disengaged` is dispatched when an engagement is removed (e.g. an "unlike"):
 
 ```php
-public Model $user,
+public Model $actor,
 public Model $engageable,
+public EngagementType $type,
 ```
 
 # Testing
