@@ -7,12 +7,15 @@ namespace Cjmellor\Engageify\Concerns;
 use Cjmellor\Engageify\Contracts\EngagementType;
 use Cjmellor\Engageify\Contracts\Exclusive;
 use Cjmellor\Engageify\Contracts\HasWeight;
+use Cjmellor\Engageify\Contracts\Rateable;
 use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Events\Disengaged;
 use Cjmellor\Engageify\Events\Engaged;
 use Cjmellor\Engageify\Exceptions\EngagementValueException;
+use Cjmellor\Engageify\Exceptions\InvalidRatingException;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
+use Cjmellor\Engageify\Support\RatingScale;
 use Cjmellor\Engageify\Support\TypeResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -87,6 +90,10 @@ trait HasEngagements
 
         if ($type instanceof Exclusive) {
             return $this->engageExclusive(type: $type, value: $value);
+        }
+
+        if ($type instanceof Rateable) {
+            return $this->rate(type: $type, value: $value);
         }
 
         throw_if(
@@ -173,6 +180,44 @@ trait HasEngagements
         return $breakdown;
     }
 
+    public function averageRating(EngagementType $type): float
+    {
+        return $this->averageOf(type: $type);
+    }
+
+    public function ratingCount(EngagementType $type): int
+    {
+        return $this->engagementCount(type: $type);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function ratingDistribution(EngagementType $type): array
+    {
+        return $this->engagements()
+            ->whereType($type)
+            ->get()
+            ->groupBy(fn (Engagement $engagement): string => (string) $engagement->value)
+            ->map(fn (Collection $group): int => $group->count())
+            ->all();
+    }
+
+    public function bayesianAverage(EngagementType $type, ?int $m = null): float
+    {
+        $m ??= (int) config(key: 'engageify.bayesian_minimum');
+
+        $count = $this->engagements()->whereType($type)->count();
+        $sum = (float) $this->engagements()->whereType($type)->sum(column: 'value');
+        $globalMean = (float) Engagement::query()->where('type', $type->value)->avg(column: 'value');
+
+        $denominator = $m + $count;
+
+        return $denominator === 0
+            ? 0.0
+            : ($m * $globalMean + $sum) / $denominator;
+    }
+
     protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
     {
         return DB::transaction(fn (): Engagement => $this->flipExclusive(type: $type, value: $value));
@@ -223,6 +268,20 @@ trait HasEngagements
             ->all();
     }
 
+    protected function rate(EngagementType&Rateable $type, int|float|null $value): Engagement
+    {
+        throw_if($value === null, InvalidRatingException::valueRequired(type: $type));
+
+        $engagement = $this->engagements()->updateOrCreate(
+            attributes: ['user_id' => auth()->id(), 'type' => $type],
+            values: ['value' => RatingScale::validate(type: $type, value: $value)],
+        );
+
+        event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
+
+        return $engagement;
+    }
+
     protected function resolveEngagementValue(EngagementType $type, int|float|null $value): int|float|null
     {
         throw_unless($value === null, EngagementValueException::notAccepted(type: $type));
@@ -232,7 +291,7 @@ trait HasEngagements
 
     protected function engagementCarriesValue(EngagementType $type): bool
     {
-        return $type instanceof HasWeight;
+        return $type instanceof HasWeight || $type instanceof Rateable;
     }
 
     protected function hasEngagedWithType(EngagementType $type): bool
