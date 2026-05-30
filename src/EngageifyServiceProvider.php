@@ -8,6 +8,14 @@ use Illuminate\Support\ServiceProvider;
 
 class EngageifyServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->mergeConfigFrom(
+            path: __DIR__.'/../config/engageify.php',
+            key: 'engageify',
+        );
+    }
+
     public function boot(): void
     {
         $this->publishes([

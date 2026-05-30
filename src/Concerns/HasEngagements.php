@@ -4,81 +4,83 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Concerns;
 
+use Cjmellor\Engageify\Contracts\EngagementType;
 use Cjmellor\Engageify\Enums\EngagementTypes;
-use Cjmellor\Engageify\Events\ModelDisengagedEvent;
-use Cjmellor\Engageify\Events\ModelDislikedEvent;
-use Cjmellor\Engageify\Events\ModelDownvotedEvent;
-use Cjmellor\Engageify\Events\ModelLikedEvent;
-use Cjmellor\Engageify\Events\ModelUpvotedEvent;
+use Cjmellor\Engageify\Events\Disengaged;
+use Cjmellor\Engageify\Events\Engaged;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
-use Illuminate\Database\Eloquent\Concerns\HasRelationships;
+use Cjmellor\Engageify\Support\TypeResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
 
 trait HasEngagements
 {
-    public function dislike(): Model
-    {
-        return $this->engage(type: EngagementTypes::Dislike);
-    }
-
+    /**
+     * @return MorphMany<Engagement, $this>
+     */
     public function engagements(): MorphMany
     {
-        /** @var HasRelationships $this */
         return $this->morphMany(related: Engagement::class, name: 'engagementable');
-    }
-
-    public function upvote(): Model
-    {
-        return $this->engage(type: EngagementTypes::Upvote);
-    }
-
-    public function downvote(): Model
-    {
-        return $this->engage(type: EngagementTypes::Downvote);
-    }
-
-    public function likes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Like, showUsers: $showUsers);
-    }
-
-    public function dislikes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Dislike, showUsers: $showUsers);
-    }
-
-    public function upvotes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Upvote, showUsers: $showUsers);
-    }
-
-    public function downvotes($showUsers = false): Collection|int
-    {
-        return $this->getEngagementCount(type: EngagementTypes::Downvote, showUsers: $showUsers);
-    }
-
-    public function toggleLike(): void
-    {
-        $this->hasEngagedWithType(type: EngagementTypes::Like)
-            ? $this->unlike()
-            : $this->like();
-    }
-
-    public function unlike(): void
-    {
-        $this->disengage(type: EngagementTypes::Like);
     }
 
     public function like(): Model
     {
-        return $this->engage(type: EngagementTypes::Like);
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Like->value));
     }
 
-    protected function engage(EngagementTypes $type): Model
+    public function dislike(): Model
     {
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Dislike->value));
+    }
+
+    public function upvote(): Model
+    {
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Upvote->value));
+    }
+
+    public function downvote(): Model
+    {
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value));
+    }
+
+    public function unlike(): void
+    {
+        $this->disengage(type: TypeResolver::resolve(value: EngagementTypes::Like->value));
+    }
+
+    public function toggleLike(): void
+    {
+        $this->hasEngagedWithType(type: TypeResolver::resolve(value: EngagementTypes::Like->value))
+            ? $this->unlike()
+            : $this->like();
+    }
+
+    public function likes(bool $showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Like->value), showUsers: $showUsers);
+    }
+
+    public function dislikes(bool $showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Dislike->value), showUsers: $showUsers);
+    }
+
+    public function upvotes(bool $showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Upvote->value), showUsers: $showUsers);
+    }
+
+    public function downvotes(bool $showUsers = false): Collection|int
+    {
+        return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value), showUsers: $showUsers);
+    }
+
+    public function engage(EngagementType $type): Model
+    {
+        $type = TypeResolver::ensure(type: $type);
+
         throw_if(
             config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type),
             UserCannotEngageException::class,
@@ -94,17 +96,29 @@ trait HasEngagements
             'type' => $type,
         ]);
 
-        match ($type) {
-            EngagementTypes::Like => event(new ModelLikedEvent(auth()->user(), $this, $engagement)),
-            EngagementTypes::Dislike => event(new ModelDislikedEvent(auth()->user(), $this, $engagement)),
-            EngagementTypes::Upvote => event(new ModelUpvotedEvent(auth()->user(), $this, $engagement)),
-            EngagementTypes::Downvote => event(new ModelDownvotedEvent(auth()->user(), $this, $engagement)),
-        };
+        event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
 
         return $engagement;
     }
 
-    protected function hasEngagedWithType(EngagementTypes $type): bool
+    public function disengage(EngagementType $type): void
+    {
+        $this->engagements()
+            ->whereUserId(auth()->id())
+            ->whereType($type)
+            ->delete();
+
+        event(new Disengaged(actor: auth()->user(), engageable: $this, type: $type));
+    }
+
+    public function engagementCount(EngagementType $type): int
+    {
+        return $this->engagements()
+            ->whereType($type)
+            ->count();
+    }
+
+    protected function hasEngagedWithType(EngagementType $type): bool
     {
         return $this->engagements()
             ->whereUserId(auth()->id())
@@ -112,12 +126,12 @@ trait HasEngagements
             ->exists();
     }
 
-    protected function getEngagementCacheKey(EngagementTypes $type): string
+    protected function getEngagementCacheKey(EngagementType $type): string
     {
         return "engagements.$type->value.$this->id";
     }
 
-    protected function getEngagementCount(EngagementTypes $type, $showUsers = false): Collection|int
+    protected function getEngagementCount(EngagementType $type, bool $showUsers = false): Collection|int
     {
         if ($showUsers) {
             return $this->engagements()
@@ -137,22 +151,5 @@ trait HasEngagements
         }
 
         return $this->engagementCount(type: $type);
-    }
-
-    protected function engagementCount(EngagementTypes $type): int
-    {
-        return $this->engagements()
-            ->whereType($type)
-            ->count();
-    }
-
-    protected function disengage(EngagementTypes $type): void
-    {
-        $this->engagements()
-            ->whereUserId(auth()->id())
-            ->whereType($type)
-            ->delete();
-
-        event(new ModelDisengagedEvent(auth()->user(), $this));
     }
 }

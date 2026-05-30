@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->morphs(name: 'engagementable');
             $table->foreignId(column: $config = config(key: 'engageify.users.foreign_key', default: 'user_id'))->constrained(config(key: 'engageify.users.table'))->cascadeOnDelete();
-            $table->enum(column: 'type', allowed: ['like', 'dislike', 'upvote', 'downvote']);
+            $table->string(column: 'type');
             $table->timestamps();
 
             $table->index(columns: 'type');

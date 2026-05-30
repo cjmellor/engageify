@@ -1,9 +1,21 @@
 <?php
 
 declare(strict_types=1);
-use App\Models\User;
+use Cjmellor\Engageify\Enums\EngagementTypes;
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Engagement Types
+    |--------------------------------------------------------------------------
+    |
+    | The string-backed enum that defines the available engagement Verbs. Ship
+    | your own enum implementing Cjmellor\Engageify\Contracts\EngagementType to
+    | extend the vocabulary — no migration required.
+    |
+    */
+    'types' => EngagementTypes::class,
+
     /*
     |--------------------------------------------------------------------------
     | User Configuration
@@ -14,7 +26,7 @@ return [
     */
     'users' => [
         'foreign_key' => 'user_id',
-        'model' => User::class,
+        'model' => 'App\Models\User',
         'table' => 'users',
     ],
 
