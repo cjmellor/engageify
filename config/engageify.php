@@ -50,4 +50,16 @@ return [
     */
     'allow_caching' => env(key: 'ENGAGEIFY_ALLOW_CACHING', default: false),
     'cache_duration' => env(key: 'ENGAGEIFY_CACHE_DURATION', default: 3600),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bayesian Minimum
+    |--------------------------------------------------------------------------
+    |
+    | The prior weight (m) used by bayesianAverage(): the number of "average"
+    | votes an Engageable is seeded with before its own ratings outweigh the
+    | global mean. Higher values pull low-count items harder toward the mean.
+    |
+    */
+    'bayesian_minimum' => env(key: 'ENGAGEIFY_BAYESIAN_MINIMUM', default: 5),
 ];
