@@ -181,6 +181,52 @@ $post->netScore('vote');   // e.g. 42
 $post->breakdown('vote');  // ['up' => 50, 'down' => 8]
 ```
 
+### Ratings
+
+For star-style or scored ratings, implement `Cjmellor\Engageify\Contracts\Rateable` with a `min()`, `max()` and `step()` (return `null` for a continuous scale). A `Rateable` Verb takes a **caller-supplied value validated against its scale**:
+
+```php
+use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\Rateable;
+
+enum Rating: string implements EngagementType, Rateable
+{
+    case Stars = 'stars';
+
+    public function min(): float
+    {
+        return 1.0;
+    }
+
+    public function max(): float
+    {
+        return 5.0;
+    }
+
+    public function step(): ?float
+    {
+        return 1.0;
+    }
+}
+```
+
+```php
+$film->engage(Rating::Stars, 4);   // stored, validated against 1–5 step 1
+$film->engage(Rating::Stars, 6);   // throws InvalidRatingException (out of range)
+$film->engage(Rating::Stars, 2.5); // throws InvalidRatingException (off step)
+```
+
+Ratings are **scalar with upsert semantics**: at most one rating per user per target. Re-rating updates the existing row (and ignores `allow_multiple_engagements` entirely — re-rating is governed by the Verb, not config). Read them back with:
+
+```php
+$film->averageRating(Rating::Stars);     // mean rating
+$film->ratingCount(Rating::Stars);       // number of ratings
+$film->ratingDistribution(Rating::Stars); // ['5.00' => 12, '4.00' => 3, ...]
+$film->bayesianAverage(Rating::Stars);    // mean pulled toward the global average for low-count items
+```
+
+`bayesianAverage()` seeds each target with `m` "average" votes (the `engageify.bayesian_minimum` config, overridable per call) so a single 5-star rating doesn't outrank a film with hundreds of high scores.
+
 ### "Like" Specific Reaction
 
 The "like" reaction has some additional functionality. A "like" can be "unliked". This shouldn't be confused with a "dislike" as a "dislike" counts as an engagement, whereas an "unlike" is deleting the engagement.
