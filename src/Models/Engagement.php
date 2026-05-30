@@ -32,6 +32,7 @@ class Engagement extends Model
     {
         return [
             'type' => config(key: 'engageify.types'),
+            'value' => 'decimal:2',
         ];
     }
 }

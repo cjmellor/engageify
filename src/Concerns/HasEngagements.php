@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Cjmellor\Engageify\Concerns;
 
 use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\HasWeight;
 use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Events\Disengaged;
 use Cjmellor\Engageify\Events\Engaged;
+use Cjmellor\Engageify\Exceptions\EngagementValueException;
 use Cjmellor\Engageify\Exceptions\UserCannotEngageException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Support\TypeResolver;
@@ -77,7 +79,7 @@ trait HasEngagements
         return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value), showUsers: $showUsers);
     }
 
-    public function engage(EngagementType $type): Model
+    public function engage(EngagementType $type, int|float|null $value = null): Model
     {
         $type = TypeResolver::ensure(type: $type);
 
@@ -94,11 +96,30 @@ trait HasEngagements
         $engagement = $this->engagements()->create([
             'user_id' => auth()->id(),
             'type' => $type,
+            'value' => $this->resolveEngagementValue(type: $type, value: $value),
         ]);
 
         event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
 
         return $engagement;
+    }
+
+    public function score(EngagementType $type): float
+    {
+        $type = TypeResolver::ensure(type: $type);
+
+        throw_unless($this->engagementCarriesValue(type: $type), EngagementValueException::notAvailable(type: $type));
+
+        return (float) $this->engagements()->whereType($type)->sum(column: 'value');
+    }
+
+    public function averageOf(EngagementType $type): float
+    {
+        $type = TypeResolver::ensure(type: $type);
+
+        throw_unless($this->engagementCarriesValue(type: $type), EngagementValueException::notAvailable(type: $type));
+
+        return (float) $this->engagements()->whereType($type)->avg(column: 'value');
     }
 
     public function disengage(EngagementType $type): void
@@ -116,6 +137,18 @@ trait HasEngagements
         return $this->engagements()
             ->whereType($type)
             ->count();
+    }
+
+    protected function resolveEngagementValue(EngagementType $type, int|float|null $value): int|float|null
+    {
+        throw_unless($value === null, EngagementValueException::notAccepted(type: $type));
+
+        return $type instanceof HasWeight ? $type->weight() : null;
+    }
+
+    protected function engagementCarriesValue(EngagementType $type): bool
+    {
+        return $type instanceof HasWeight;
     }
 
     protected function hasEngagedWithType(EngagementType $type): bool
