@@ -96,6 +96,47 @@ $post->disengage(Reaction::Bookmark);
 
 Passing a Verb that does not belong to the configured enum throws an `UnknownEngagementType` exception.
 
+### Weighted Verbs & Engagement Values
+
+Engagements can carry an optional numeric **value** (a nullable signed decimal column). A Verb opts in by implementing `Cjmellor\Engageify\Contracts\HasWeight`, which derives a fixed weight per case — for example an upvote is `+1` and a downvote `-1`:
+
+```php
+use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\HasWeight;
+
+enum Vote: string implements EngagementType, HasWeight
+{
+    case Up = 'up';
+    case Down = 'down';
+
+    public function weight(): int
+    {
+        return match ($this) {
+            self::Up => 1,
+            self::Down => -1,
+        };
+    }
+}
+```
+
+When a `HasWeight` Verb is engaged its weight is stored automatically. You cannot pass your own value to a `HasWeight` Verb (or to a binary Verb) — doing so throws an `EngagementValueException`. Binary Verbs store `null`.
+
+```php
+$post->engage(Vote::Up);   // stores the derived value 1
+$post->engage(Vote::Down); // stores the derived value -1
+```
+
+Read the value back per Verb with `score()` (a `SUM`) and `averageOf()` (an `AVG`):
+
+```php
+$post->score(Vote::Up);     // total stored weight for upvotes
+$post->averageOf(Vote::Up); // mean stored weight for upvotes
+```
+
+Both throw an `EngagementValueException` on a binary Verb, which carries no value to aggregate.
+
+> Upgrading from v1? The `value` column ships as an additive migration — publish it with `php artisan vendor:publish --tag="engageify-migrations"` and run `php artisan migrate`.
+
 ### "Like" Specific Reaction
 
 The "like" reaction has some additional functionality. A "like" can be "unliked". This shouldn't be confused with a "dislike" as a "dislike" counts as an engagement, whereas an "unlike" is deleting the engagement.
