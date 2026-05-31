@@ -294,6 +294,85 @@ trait HasEngagements
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
+    protected function scopeHot(Builder $query, string $direction = 'desc'): Builder
+    {
+        $model = $query->getModel();
+
+        return $query
+            ->leftJoinSub(
+                EngagementCounter::query()
+                    ->selectRaw('engagementable_id, max(hot_score) as hot_score')
+                    ->where('engagementable_type', $model->getMorphClass())
+                    ->groupBy('engagementable_id'),
+                'engagement_hot',
+                'engagement_hot.engagementable_id',
+                '=',
+                $model->getQualifiedKeyName(),
+            )
+            ->orderBy('engagement_hot.hot_score', $direction)
+            ->select("{$model->getTable()}.*");
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function scopeTop(Builder $query, string $period = 'all', string $direction = 'desc'): Builder
+    {
+        $model = $query->getModel();
+
+        if ($period !== 'all') {
+            $query->where($model->getQualifiedCreatedAtColumn(), '>=', now()->sub("1 {$period}"));
+        }
+
+        return $query
+            ->leftJoinSub(
+                EngagementCounter::query()
+                    ->selectRaw('engagementable_id, sum(sum_value) as top_score')
+                    ->where('engagementable_type', $model->getMorphClass())
+                    ->groupBy('engagementable_id'),
+                'engagement_top',
+                'engagement_top.engagementable_id',
+                '=',
+                $model->getQualifiedKeyName(),
+            )
+            ->orderBy('engagement_top.top_score', $direction)
+            ->select("{$model->getTable()}.*");
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function scopeOrderByBayesian(Builder $query, EngagementType $type, ?int $m = null, string $direction = 'desc'): Builder
+    {
+        $m ??= (int) config(key: 'engageify.bayesian_minimum');
+
+        $globalCount = (int) EngagementCounter::query()->where('type', $type->value)->sum(column: 'count');
+        $globalSum = (float) EngagementCounter::query()->where('type', $type->value)->sum(column: 'sum_value');
+        $globalMean = $globalCount === 0 ? 0.0 : $globalSum / $globalCount;
+
+        $model = $query->getModel();
+
+        return $query
+            ->leftJoinSub(
+                EngagementCounter::query()
+                    ->selectRaw('engagementable_id, (? * ? + sum_value) / (? + count) as bayesian', [$m, $globalMean, $m])
+                    ->where('engagementable_type', $model->getMorphClass())
+                    ->where('type', $type->value),
+                'engagement_bayesian',
+                'engagement_bayesian.engagementable_id',
+                '=',
+                $model->getQualifiedKeyName(),
+            )
+            ->orderBy('engagement_bayesian.bayesian', $direction)
+            ->select("{$model->getTable()}.*");
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     protected function scopeWithUserEngagement(Builder $query, EngagementType $type, ?Model $user = null): Builder
     {
         $userKey = $user?->getKey() ?? auth()->id();

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Cjmellor\Engageify\Models;
 
 use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Support\HotScore;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string $type
  * @property int $count
  * @property string $sum_value
+ * @property float $hot_score
  */
 class EngagementCounter extends Model
 {
@@ -27,6 +30,18 @@ class EngagementCounter extends Model
 
         $counter->increment(column: 'count', amount: $countDelta);
         $counter->increment(column: 'sum_value', amount: $valueDelta);
+
+        if ((float) $valueDelta !== 0.0) {
+            $counter->refresh();
+
+            $sum = (float) $counter->sum_value;
+            $createdAt = $engageable->getAttribute($engageable->getCreatedAtColumn() ?? 'created_at');
+
+            $counter->hot_score = $sum !== 0.0 && $createdAt instanceof DateTimeInterface
+                ? HotScore::calculate(score: $sum, createdAt: $createdAt)
+                : 0;
+            $counter->save();
+        }
     }
 
     public static function rebuild(): void
@@ -61,6 +76,7 @@ class EngagementCounter extends Model
     {
         return [
             'sum_value' => 'decimal:2',
+            'hot_score' => 'double',
         ];
     }
 }
