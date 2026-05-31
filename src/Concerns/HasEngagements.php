@@ -290,6 +290,42 @@ trait HasEngagements
             ->select("{$model->getTable()}.*");
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function scopeWithUserEngagement(Builder $query, EngagementType $type, ?Model $user = null): Builder
+    {
+        $userKey = $user?->getKey() ?? auth()->id();
+
+        $model = $query->getModel();
+
+        $query
+            ->addSelect("{$model->getTable()}.*")
+            ->addSelect(['is_engaged' => $this->userEngagementSubquery(model: $model, type: $type, userKey: $userKey)->selectRaw('count(*)')])
+            ->withCasts(['is_engaged' => 'boolean']);
+
+        if ($type instanceof Rateable) {
+            $query
+                ->addSelect(['engagement_value' => $this->userEngagementSubquery(model: $model, type: $type, userKey: $userKey)->select('value')->limit(1)])
+                ->withCasts(['engagement_value' => 'decimal:2']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return Builder<Engagement>
+     */
+    protected function userEngagementSubquery(Model $model, EngagementType $type, mixed $userKey): Builder
+    {
+        return Engagement::query()
+            ->whereColumn('engagementable_id', $model->getQualifiedKeyName())
+            ->where('engagementable_type', $model->getMorphClass())
+            ->where('type', $type->value)
+            ->where('user_id', $userKey);
+    }
+
     protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
     {
         return DB::transaction(fn (): Engagement => $this->flipExclusive(type: $type, value: $value));
