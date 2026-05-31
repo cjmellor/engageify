@@ -423,7 +423,9 @@ ENGAGEIFY_IMPRESSION_INJECT=true
 
 or set `engageify.impressions.inject_script` to `true`. Tune detection with `engageify.impressions.threshold` (0–1) and `dwell` (ms). Mark elements with `@impression($model)` and they'll be tracked automatically.
 
-(Prefer to wire it up yourself? Leave the middleware off and include `resources/js/dist/engageify.iife.js` however you like.)
+While injection is off, the middleware is **not added to the global HTTP stack at all** — it costs you nothing per request. Enabling it pushes it onto the global stack so every HTML response is rewritten; this is a config-time decision, so toggle the setting and clear your config cache (`php artisan config:clear`) for it to take effect.
+
+(Prefer to wire it up yourself? Leave the setting off and include `resources/js/dist/engageify.iife.js` however you like.)
 
 ## Events
 

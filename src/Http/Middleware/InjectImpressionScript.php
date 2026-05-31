@@ -21,10 +21,6 @@ class InjectImpressionScript
     {
         $response = $next($request);
 
-        if (! config(key: 'engageify.impressions.inject_script')) {
-            return $response;
-        }
-
         if (! str_contains(strtolower((string) $response->headers->get('Content-Type')), 'text/html')) {
             return $response;
         }
