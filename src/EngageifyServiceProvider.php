@@ -35,7 +35,7 @@ class EngageifyServiceProvider extends ServiceProvider
 
         $this->registerImpressionRoute();
 
-        $this->app->make(Kernel::class)->pushMiddleware(InjectImpressionScript::class);
+        $this->registerInjectionMiddleware();
 
         Blade::directive('impression', fn (string $expression): string => "<?php echo \Cjmellor\Engageify\Support\ImpressionToken::attribute({$expression}); ?>");
 
@@ -46,6 +46,13 @@ class EngageifyServiceProvider extends ServiceProvider
         $this->publishesMigrations([
             __DIR__.'/../database/migrations' => database_path(path: 'migrations'),
         ], groups: 'engageify-migrations');
+    }
+
+    public function registerInjectionMiddleware(): void
+    {
+        if (config(key: 'engageify.impressions.inject_script')) {
+            $this->app->make(Kernel::class)->pushMiddleware(InjectImpressionScript::class);
+        }
     }
 
     protected function registerImpressionRoute(): void
