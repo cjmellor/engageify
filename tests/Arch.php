@@ -7,3 +7,8 @@ test('Arch tests')
     ->each
     ->not
     ->toBeUsed();
+
+test('shipped factories do not depend on test fixtures')
+    ->expect('Cjmellor\Engageify\Database\Factories')
+    ->not
+    ->toUse('Cjmellor\Engageify\Tests');
