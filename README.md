@@ -261,18 +261,23 @@ $post->upvotes();
 $post->downvotes();
 ```
 
-### Caching Engagement Counts
+Counts are read from a denormalised `engagement_counters` table that is kept in step **inside the same database transaction** as every engage/disengage/flip — so they are always fresh and O(1) to read (no cache to invalidate, and no stale-count-after-unlike bug).
 
-A caching feature is available, which is off by default but can be changed in the config file, or by adding it to your `.env` file
+> The counters are maintained automatically. If you ever write engagement rows directly (bypassing the trait), rebuild them with `php artisan engageify:recount`.
 
-```text
-ENGAGEIFY_ALLOW_CACHING=true
-ENGAGEIFY_CACHE_DURATION=3600
+### Ranking
+
+Because counts live in the database, you can sort by them in SQL straight from the Engageable's query builder:
+
+```php
+// Most-liked posts first
+Post::query()->orderByEngagementCount(EngagementTypes::Like)->get();
+
+// Highest net vote score first
+Post::query()->orderByScore('vote')->get();
 ```
 
-When an engagement is retrieved, it is cached, and further requests will retireve the data from the cache.
-
-On each new engagement, the cache will be cleared.
+Both accept a direction (`'desc'` by default).
 
 #### Fetch Users' Who Engaged
 
