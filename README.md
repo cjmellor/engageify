@@ -368,6 +368,20 @@ Thread::query()->orderByMostViewed('week')->get();  // most viewed this week
 
 > **Buckets can't be backfilled.** While `buckets` is off, only the lifetime total exists — there's no per-day history to reconstruct. If you might ever want windows or trending, enable buckets from day one.
 
+### Impressions (viewport)
+
+A *view* is server-detectable; an *impression* (was the element actually on screen) can only be measured in the browser. Engageify ships the secure backend for it. Mark an element with the `@impression` directive, which emits a data attribute carrying an **app-key-signed token** (HMAC of `type:id` + expiry):
+
+```blade
+<article @impression($thread)>
+    ...
+</article>
+```
+
+A browser posts that token to the impression endpoint (default `POST /engageify/impressions`), which **verifies the signature** before counting — so only server-rendered, unexpired elements can report an impression. It's layered with the same fingerprint dedup as views and is route-throttled. Forged, tampered, or expired tokens are rejected without counting. Impressions accumulate on the same count-only counter (no per-impression rows).
+
+Configure the endpoint, throttle and token lifetime under `engageify.impressions`. (The viewport-detection script that posts these tokens ships with the frontend integration.)
+
 ## Events
 
 Two generic events are dispatched for every engagement, regardless of the Verb.
