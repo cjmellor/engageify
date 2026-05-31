@@ -1,0 +1,7 @@
+{
+    "private": true,
+    "scripts": {
+        "build": "bun build resources/js/src/main.ts --outfile resources/js/dist/engageify.iife.js --format iife --minify",
+        "test": "bun test resources/js"
+    }
+}

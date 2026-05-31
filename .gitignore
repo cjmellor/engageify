@@ -5,3 +5,7 @@
 /CLAUDE.local.md
 /CONTEXT.md
 /docs/
+
+/node_modules
+/bun.lockb
+/bun.lock
