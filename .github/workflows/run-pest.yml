@@ -1,5 +1,10 @@
 name: "Run Pest"
-on: pull_request
+on:
+  push:
+    branches:
+      - main
+      - "1.x"
+  pull_request:
 
 permissions:
   contents: read
