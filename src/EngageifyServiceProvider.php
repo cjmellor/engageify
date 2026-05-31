@@ -6,6 +6,8 @@ namespace Cjmellor\Engageify;
 
 use Cjmellor\Engageify\Commands\RecountCommand;
 use Cjmellor\Engageify\Http\Controllers\ImpressionController;
+use Cjmellor\Engageify\Http\Middleware\InjectImpressionScript;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +31,8 @@ class EngageifyServiceProvider extends ServiceProvider
         }
 
         $this->registerImpressionRoute();
+
+        $this->app->make(Kernel::class)->pushMiddleware(InjectImpressionScript::class);
 
         Blade::directive('impression', fn (string $expression): string => "<?php echo \Cjmellor\Engageify\Support\ImpressionToken::attribute({$expression}); ?>");
 
