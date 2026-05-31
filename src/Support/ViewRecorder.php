@@ -8,6 +8,8 @@ use Cjmellor\Engageify\Models\EngagementCounter;
 use Cjmellor\Engageify\Models\ViewBucket;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class ViewRecorder
 {
@@ -27,10 +29,18 @@ class ViewRecorder
             return;
         }
 
-        EngagementCounter::record(engageable: $viewable, type: self::TYPE, countDelta: 1, valueDelta: 0);
+        try {
+            DB::transaction(function () use ($viewable): void {
+                EngagementCounter::record(engageable: $viewable, type: self::TYPE, countDelta: 1, valueDelta: 0);
 
-        if (config(key: 'engageify.views.buckets')) {
-            ViewBucket::record(viewable: $viewable, date: today());
+                if (config(key: 'engageify.views.buckets')) {
+                    ViewBucket::record(viewable: $viewable, date: today());
+                }
+            });
+        } catch (Throwable $exception) {
+            Cache::forget(key: $key);
+
+            throw $exception;
         }
     }
 }
