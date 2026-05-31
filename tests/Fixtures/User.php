@@ -6,6 +6,7 @@ namespace Cjmellor\Engageify\Tests\Fixtures;
 
 use Cjmellor\Engageify\Concerns\EngagesWith;
 use Cjmellor\Engageify\Concerns\HasEngagements;
+use Cjmellor\Engageify\Concerns\HasViews;
 use Cjmellor\Engageify\Tests\Fixtures\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,6 +21,7 @@ class User extends Authenticatable
         EngagesWith::engagements as authoredEngagements;
     }
     use HasFactory;
+    use HasViews;
 
     protected $guarded = [];
 
