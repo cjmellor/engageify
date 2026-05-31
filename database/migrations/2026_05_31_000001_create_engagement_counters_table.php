@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->morphs(name: 'engagementable');
             $table->string(column: 'type');
-            $table->unsignedBigInteger(column: 'count')->default(0);
+            $table->bigInteger(column: 'count')->default(0);
             $table->decimal(column: 'sum_value', total: 8, places: 2)->default(0);
             $table->timestamps();
 
