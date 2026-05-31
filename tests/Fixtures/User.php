@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Tests\Fixtures;
 
+use Cjmellor\Engageify\Concerns\EngagesWith;
 use Cjmellor\Engageify\Concerns\HasEngagements;
 use Cjmellor\Engageify\Tests\Fixtures\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -14,7 +15,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 #[Table(name: 'users')]
 class User extends Authenticatable
 {
-    use HasEngagements;
+    use EngagesWith, HasEngagements {
+        HasEngagements::engagements insteadof EngagesWith;
+        EngagesWith::engagements as authoredEngagements;
+    }
     use HasFactory;
 
     protected $guarded = [];
