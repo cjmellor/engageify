@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Models;
 
-use Cjmellor\Engageify\Contracts\EngagementType;
 use Cjmellor\Engageify\Support\HotScore;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -20,12 +19,12 @@ class EngagementCounter extends Model
 {
     protected $guarded = [];
 
-    public static function record(Model $engageable, EngagementType $type, int $countDelta, int|float $valueDelta): void
+    public static function record(Model $engageable, string $type, int $countDelta, int|float $valueDelta): void
     {
         $counter = static::query()->firstOrCreate([
             'engagementable_type' => $engageable->getMorphClass(),
             'engagementable_id' => $engageable->getKey(),
-            'type' => $type->value,
+            'type' => $type,
         ]);
 
         $counter->increment(column: 'count', amount: $countDelta);
