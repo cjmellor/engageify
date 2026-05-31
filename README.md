@@ -24,6 +24,29 @@ php artisan vendor:publish --tag="engageify-config"
 
 The published config file allows you to customize table names, model relationships, and more.
 
+## Upgrading from v1
+
+v2 changes how engagement counts are stored and read. **If you are upgrading an existing v1 install, run these steps once — otherwise your counts and scores will read as `0`.**
+
+1. **Publish and run the new migrations.** v2 adds a `value` column to `engagements` and introduces the denormalised `engagement_counters` table (plus the opt-in `view_buckets` table):
+
+   ```bash
+   php artisan vendor:publish --tag="engageify-migrations"
+   php artisan migrate
+   ```
+
+2. **Backfill the counters (required).** Counts and scores are now read from `engagement_counters`, which starts **empty**. Rebuild it from your existing `engagements` rows:
+
+   ```bash
+   php artisan engageify:recount
+   ```
+
+   Until you run this, every count, score, and ranking query returns **`0`** for pre-existing engagements. The engagement rows themselves are untouched — only the counter table needs building.
+
+> **Heads-up:** the in-memory cache layer from v1 has been removed. Counts are kept in step inside the same database transaction as every engage/disengage, so they are always fresh — the `allow_caching` / `cache_duration` config keys no longer exist, and there is nothing to invalidate.
+
+See [`UPGRADING.md`](UPGRADING.md) for the full checklist.
+
 ## Usage
 
 For Models you wish to have engagement features (likes/upvotes), use the Engageable trait.
@@ -263,7 +286,7 @@ $post->downvotes();
 
 Counts are read from a denormalised `engagement_counters` table that is kept in step **inside the same database transaction** as every engage/disengage/flip — so they are always fresh and O(1) to read (no cache to invalidate, and no stale-count-after-unlike bug).
 
-> The counters are maintained automatically. If you ever write engagement rows directly (bypassing the trait), rebuild them with `php artisan engageify:recount`.
+> The counters are maintained automatically. Run `php artisan engageify:recount` to (re)build them from the `engagements` table — this is **required once when [upgrading from v1](#upgrading-from-v1)** (counters start empty), and also whenever you write engagement rows directly, bypassing the trait.
 
 ### Ranking
 
