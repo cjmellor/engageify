@@ -324,6 +324,8 @@ $feed = Post::query()->withUserEngagement(EngagementTypes::Like)->get();
 $feed->first()->is_engaged; // true/false — no extra query per row
 ```
 
+If more than one engagement row exists for the same user, target and Verb (e.g. seeded or imported data), the attached `engagement_value` is taken from the **most recent** engagement, so the value is deterministic across database engines.
+
 #### Fetch Users' Who Engaged
 
 Instead of just fetching the amount of engagements, you can fetch the Users who engaged.

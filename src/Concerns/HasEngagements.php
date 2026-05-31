@@ -386,7 +386,7 @@ trait HasEngagements
 
         if ($type instanceof Rateable) {
             $query
-                ->addSelect(['engagement_value' => $this->userEngagementSubquery(model: $model, type: $type, userKey: $userKey)->select('value')->limit(1)])
+                ->addSelect(['engagement_value' => $this->userEngagementSubquery(model: $model, type: $type, userKey: $userKey)->select('value')->orderByDesc('id')->limit(1)])
                 ->withCasts(['engagement_value' => 'decimal:2']);
         }
 

@@ -96,3 +96,22 @@ test('withUserEngagement attaches the typed value for a Rateable Verb', function
     expect($row->is_engaged)->toBeTrue()
         ->and((float) $row->engagement_value)->toBe(4.0);
 });
+
+test('withUserEngagement attaches the most recent value when several rated rows exist for the actor', function (): void {
+    config(['engageify.types' => Rating::class]);
+
+    $this->target->engagements()->createMany([
+        ['user_id' => $this->actor->id, 'type' => Rating::Stars, 'value' => 2],
+        ['user_id' => $this->actor->id, 'type' => Rating::Stars, 'value' => 5],
+    ]);
+
+    $queries = 0;
+    DB::listen(function () use (&$queries): void {
+        $queries++;
+    });
+
+    $row = User::query()->whereKey($this->target->id)->withUserEngagement(Rating::Stars)->first();
+
+    expect($queries)->toBe(1)
+        ->and((float) $row->engagement_value)->toBe(5.0);
+});
