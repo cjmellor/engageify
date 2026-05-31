@@ -30,6 +30,18 @@ test('engaging increments the counter and disengaging decrements it — no stale
     ]);
 });
 
+test('a counter decremented below zero is stored without an out-of-range error and recount repairs it', function (): void {
+    config(['engageify.types' => Vote::class]);
+
+    EngagementCounter::record(engageable: $this->user, type: Vote::Up->value, countDelta: -1, valueDelta: -1.0);
+
+    expect(EngagementCounter::query()->where('type', Vote::Up->value)->firstOrFail()->count)->toBe(-1);
+
+    EngagementCounter::rebuild();
+
+    $this->assertDatabaseCount(EngagementCounter::class, 0);
+});
+
 test('a counter belongs to its engageable', function (): void {
     $this->user->like();
 
