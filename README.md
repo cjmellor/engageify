@@ -279,6 +279,38 @@ Post::query()->orderByScore('vote')->get();
 
 Both accept a direction (`'desc'` by default).
 
+### Actor-Side Queries
+
+So far the API has been *engageable*-side ("how many likes does this post have?"). To answer *actor*-side questions ("what has this user engaged with?"), add the `EngagesWith` trait to your actor (usually the `User`) model:
+
+```php
+use Cjmellor\Engageify\Concerns\EngagesWith;
+
+class User extends Authenticatable
+{
+    use EngagesWith;
+}
+```
+
+```php
+$user->hasEngaged($post, EngagementTypes::Like);     // bool
+$user->engagementValueFor($post, Vote::Up);          // the stored value, or null
+$user->ratingFor($film, Rating::Stars);              // alias for engagementValueFor
+$user->engagements;                                  // every engagement this user authored
+```
+
+> If a model is **both** an actor and an engageable, both traits expose an `engagements()` relation — resolve the clash with PHP's trait syntax (`HasEngagements::engagements insteadof EngagesWith;` and alias the other).
+
+#### Feed state without N+1
+
+`withUserEngagement($type, ?$user = null)` attaches each engageable's state for a given user (defaulting to the auth user) as a typed `is_engaged` boolean — plus an `engagement_value` for `Rateable` Verbs — resolved for the whole result set in **one** query:
+
+```php
+$feed = Post::query()->withUserEngagement(EngagementTypes::Like)->get();
+
+$feed->first()->is_engaged; // true/false — no extra query per row
+```
+
 #### Fetch Users' Who Engaged
 
 Instead of just fetching the amount of engagements, you can fetch the Users who engaged.
