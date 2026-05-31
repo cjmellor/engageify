@@ -382,6 +382,8 @@ Thread::query()->orderByMostViewed()->get(); // most viewed, all-time
 
 Viewers are deduplicated by a **fingerprint** — the authenticated user id, or a SHA-256 hash of IP + user agent for anonymous traffic (the raw IP is never stored). A repeat view inside `engageify.views.cooldown` seconds doesn't count again.
 
+> **Dedup needs a persistent cache store.** The cooldown is enforced with an atomic `Cache::add`, so it only holds on a shared, persistent driver (`redis`, `memcached`, `database`, …). On a non-persistent driver — notably `array`, which lives only for the current request — the cooldown is never seen by the next request, so the same viewer is counted on **every** view and impression. Use a real cache driver in production.
+
 ### Time-windowed views (opt-in)
 
 A lifetime total is always kept. For "views this week"/trending you must opt into a per-day bucket table by setting `engageify.views.buckets` to `true` (or `ENGAGEIFY_VIEW_BUCKETS=true`):
@@ -406,6 +408,8 @@ A *view* is server-detectable; an *impression* (was the element actually on scre
 ```
 
 A browser posts that token to the impression endpoint (default `POST /engageify/impressions`), which **verifies the signature** before counting — so only server-rendered, unexpired elements can report an impression. It's layered with the same fingerprint dedup as views — on its own `engageify.impressions.cooldown` window — and is route-throttled. Forged, tampered, or expired tokens are rejected without counting. Impressions accumulate on the same count-only counter (no per-impression rows).
+
+> **Operational note — token signing & `APP_KEY`.** Impression tokens are signed with your `APP_KEY`, so **rotating the key invalidates every outstanding token**: pages rendered before the rotation get a `403` from the endpoint until they re-render with freshly signed tokens. Tokens also carry a TTL (`engageify.impressions.token_ttl`, default `86400` — 24h), so a token can outlive a deploy and keep counting until it expires. Size the TTL against how long a rendered page may realistically stay open.
 
 #### Enabling the browser tracker
 
