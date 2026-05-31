@@ -8,6 +8,7 @@ use Cjmellor\Engageify\Support\HotScore;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property string $type
@@ -21,26 +22,35 @@ class EngagementCounter extends Model
 
     public static function record(Model $engageable, string $type, int $countDelta, int|float $valueDelta): void
     {
-        $counter = static::query()->firstOrCreate([
-            'engagementable_type' => $engageable->getMorphClass(),
-            'engagementable_id' => $engageable->getKey(),
-            'type' => $type,
-        ]);
+        DB::transaction(function () use ($engageable, $type, $countDelta, $valueDelta): void {
+            static::query()->firstOrCreate([
+                'engagementable_type' => $engageable->getMorphClass(),
+                'engagementable_id' => $engageable->getKey(),
+                'type' => $type,
+            ]);
 
-        $counter->increment(column: 'count', amount: $countDelta);
-        $counter->increment(column: 'sum_value', amount: $valueDelta);
+            $counter = static::query()
+                ->where('engagementable_type', $engageable->getMorphClass())
+                ->where('engagementable_id', $engageable->getKey())
+                ->where('type', $type)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ((float) $valueDelta !== 0.0) {
-            $counter->refresh();
+            $counter->increment(column: 'count', amount: $countDelta);
+            $counter->increment(column: 'sum_value', amount: $valueDelta);
 
-            $sum = (float) $counter->sum_value;
-            $createdAt = $engageable->getAttribute($engageable->getCreatedAtColumn() ?? 'created_at');
+            if ((float) $valueDelta !== 0.0) {
+                $counter->refresh();
 
-            $counter->hot_score = $sum !== 0.0 && $createdAt instanceof DateTimeInterface
-                ? HotScore::calculate(score: $sum, createdAt: $createdAt)
-                : 0;
-            $counter->save();
-        }
+                $sum = (float) $counter->sum_value;
+                $createdAt = $engageable->getAttribute($engageable->getCreatedAtColumn() ?? 'created_at');
+
+                $counter->hot_score = $sum !== 0.0 && $createdAt instanceof DateTimeInterface
+                    ? HotScore::calculate(score: $sum, createdAt: $createdAt)
+                    : 0;
+                $counter->save();
+            }
+        });
     }
 
     public static function tally(string $engagementableType, int|string $engagementableId, string $type): void
