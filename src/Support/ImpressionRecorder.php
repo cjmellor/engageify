@@ -21,7 +21,7 @@ class ImpressionRecorder
 
         $key = 'impression:'.$fingerprint.':'.$morphType.':'.$morphId;
 
-        if (! Cache::add(key: $key, value: true, ttl: (int) config(key: 'engageify.views.cooldown'))) {
+        if (! Cache::add(key: $key, value: true, ttl: (int) config(key: 'engageify.impressions.cooldown'))) {
             return;
         }
 

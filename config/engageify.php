@@ -88,6 +88,13 @@ return [
         'token_ttl' => env(key: 'ENGAGEIFY_IMPRESSION_TOKEN_TTL', default: 86400),
 
         /*
+        | How long (in seconds) a fingerprint is de-duplicated for — repeat
+        | impressions of the same element by the same viewer inside this window
+        | are not counted. Independent of the `views.cooldown` above.
+        */
+        'cooldown' => env(key: 'ENGAGEIFY_IMPRESSION_COOLDOWN', default: 3600),
+
+        /*
         | Inject the impression-tracking script into HTML responses. Off by
         | default — rewriting every HTML response must be a deliberate switch.
         | `threshold` is the fraction of the element that must be visible and
