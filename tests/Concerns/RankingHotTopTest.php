@@ -7,6 +7,8 @@ use Cjmellor\Engageify\Models\EngagementCounter;
 use Cjmellor\Engageify\Tests\Fixtures\Enums\Rating;
 use Cjmellor\Engageify\Tests\Fixtures\Enums\Vote;
 use Cjmellor\Engageify\Tests\Fixtures\User;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function (): void {
     $this->actingAs($this->user);
@@ -86,6 +88,23 @@ test('orderByBayesian ranks honestly using the global mean, with a configurable 
 
     expect(array_search($sure->id, $ordered, true))
         ->toBeLessThan(array_search($unsure->id, $ordered, true));
+});
+
+test('record updates the counter inside its own transaction so callers need not', function (): void {
+    config(['engageify.types' => Vote::class]);
+
+    $post = User::factory()->createOne();
+
+    EngagementCounter::record(engageable: $post, type: Vote::Up->value, countDelta: 1, valueDelta: 1.0);
+
+    $levels = [];
+    DB::listen(function (QueryExecuted $query) use (&$levels): void {
+        $levels[] = $query->connection->transactionLevel();
+    });
+
+    EngagementCounter::record(engageable: $post, type: Vote::Up->value, countDelta: 1, valueDelta: 1.0);
+
+    expect(max($levels))->toBeGreaterThan(1);
 });
 
 test('the counter columns are exposed for custom ranking scopes', function (): void {
