@@ -7,6 +7,7 @@ namespace Cjmellor\Engageify;
 use Cjmellor\Engageify\Commands\RecountCommand;
 use Cjmellor\Engageify\Http\Controllers\ImpressionController;
 use Cjmellor\Engageify\Http\Middleware\InjectImpressionScript;
+use Cjmellor\Engageify\Support\ImpressionScript;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,8 @@ class EngageifyServiceProvider extends ServiceProvider
             path: __DIR__.'/../config/engageify.php',
             key: 'engageify',
         );
+
+        $this->app->singleton(abstract: ImpressionScript::class);
     }
 
     public function boot(): void
