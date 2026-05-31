@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(columns: ['viewable_type', 'viewable_id', 'date']);
+            $table->index(columns: ['viewable_type', 'date']);
         });
     }
 };

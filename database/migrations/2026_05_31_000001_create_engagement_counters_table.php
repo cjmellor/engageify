@@ -19,6 +19,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(columns: ['engagementable_type', 'engagementable_id', 'type']);
+            $table->index(columns: 'type');
         });
 
         Schema::table('engagements', function (Blueprint $table): void {
