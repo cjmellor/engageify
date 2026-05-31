@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Http\Middleware;
 
+use Cjmellor\Engageify\Support\ImpressionScript;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as IlluminateResponse;
@@ -11,6 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class InjectImpressionScript
 {
+    public function __construct(private readonly ImpressionScript $script) {}
+
     /**
      * @param  Closure(Request): Response  $next
      */
@@ -39,19 +42,9 @@ class InjectImpressionScript
 
     private function inject(Response $response, string $content): void
     {
-        $script = str_replace(
-            ['%_ENGAGEIFY_ENDPOINT_%', '%_ENGAGEIFY_THRESHOLD_%', '%_ENGAGEIFY_DWELL_%'],
-            [
-                '/'.ltrim((string) config(key: 'engageify.impressions.endpoint'), '/'),
-                (string) config(key: 'engageify.impressions.threshold'),
-                (string) config(key: 'engageify.impressions.dwell'),
-            ],
-            (string) file_get_contents(__DIR__.'/../../../resources/js/dist/engageify.iife.js'),
-        );
-
         $original = $response instanceof IlluminateResponse ? $response->original : null;
 
-        $response->setContent(str_replace('</body>', '<script>'.$script.'</script></body>', $content));
+        $response->setContent(str_replace('</body>', '<script>'.$this->script->render().'</script></body>', $content));
 
         if ($response instanceof IlluminateResponse) {
             $response->original = $original;
