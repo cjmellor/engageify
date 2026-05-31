@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify;
 
+use Cjmellor\Engageify\Commands\RecountCommand;
 use Illuminate\Support\ServiceProvider;
 
 class EngageifyServiceProvider extends ServiceProvider
@@ -18,6 +19,12 @@ class EngageifyServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands(commands: [
+                RecountCommand::class,
+            ]);
+        }
+
         $this->publishes([
             __DIR__.'/../config/engageify.php' => config_path(path: 'engageify.php'),
         ], groups: 'engageify-config');
