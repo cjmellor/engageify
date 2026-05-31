@@ -6,6 +6,9 @@ use Cjmellor\Engageify\Exceptions\InvalidViewPeriodException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Models\ViewBucket;
 use Cjmellor\Engageify\Tests\Fixtures\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 test('recordView counts once per fingerprint per cooldown; repeats within the window do not count', function (): void {
     $post = User::factory()->createOne();
@@ -40,6 +43,43 @@ test('recording a view writes no per-view engagement row', function (): void {
     $this->assertDatabaseCount(Engagement::class, 0);
 
     expect($post->viewCount())->toBe(1);
+});
+
+test('recordView is atomic: a failed bucket write rolls back the counter increment', function (): void {
+    config(['engageify.views.buckets' => true]);
+
+    $post = User::factory()->createOne();
+    $this->actingAs($this->user);
+
+    Schema::drop('view_buckets');
+
+    expect(fn () => $post->recordView())->toThrow(QueryException::class);
+
+    expect($post->viewCount())->toBe(0);
+});
+
+test('a failed view write releases the dedup slot so the same view can be retried', function (): void {
+    config(['engageify.views.buckets' => true]);
+
+    $post = User::factory()->createOne();
+    $this->actingAs($this->user);
+
+    Schema::drop('view_buckets');
+    rescue(callback: fn () => $post->recordView(), report: false);
+
+    Schema::create('view_buckets', function (Blueprint $table): void {
+        $table->id();
+        $table->morphs(name: 'viewable');
+        $table->date(column: 'date');
+        $table->unsignedBigInteger(column: 'count')->default(0);
+        $table->timestamps();
+        $table->unique(columns: ['viewable_type', 'viewable_id', 'date']);
+    });
+
+    $post->recordView();
+
+    expect($post->viewCount())->toBe(1);
+    $this->assertDatabaseCount(ViewBucket::class, 1);
 });
 
 test('with buckets off only the lifetime total is kept', function (): void {
