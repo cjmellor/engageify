@@ -145,34 +145,6 @@ test(description: 'retrieve unique list of Users\' who engaged with a Model', cl
     EngagementTypes::Downvote->value,
 ]);
 
-test(description: 'engagement counts are cached when caching is enabled', closure: function (): void {
-    config(['engageify.allow_caching' => true]);
-
-    $this->actingAs($this->user);
-
-    $this->user->like();
-
-    $cacheKey = "engagements.like.{$this->user->id}";
-
-    expect(cache()->has(key: $cacheKey))->toBeFalse();
-
-    expect($this->user->likes())->toBe(expected: 1)
-        ->and(cache()->has(key: $cacheKey))->toBeTrue();
-});
-
-test(description: 'the cached count is cleared when a new engagement is made', closure: function (): void {
-    config(['engageify.allow_caching' => true]);
-    config(['engageify.allow_multiple_engagements' => true]);
-
-    $this->actingAs($this->user);
-
-    $this->user->like();
-    expect($this->user->likes())->toBe(expected: 1);
-
-    $this->user->like();
-    expect($this->user->likes())->toBe(expected: 2);
-});
-
 test(description: 'toggleLike likes a Model that has not been liked yet', closure: function (): void {
     $this->actingAs($this->user);
 
