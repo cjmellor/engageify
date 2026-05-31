@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Cjmellor\Engageify;
 
 use Cjmellor\Engageify\Commands\RecountCommand;
+use Cjmellor\Engageify\Http\Controllers\ImpressionController;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class EngageifyServiceProvider extends ServiceProvider
@@ -25,6 +28,10 @@ class EngageifyServiceProvider extends ServiceProvider
             ]);
         }
 
+        $this->registerImpressionRoute();
+
+        Blade::directive('impression', fn (string $expression): string => "<?php echo \Cjmellor\Engageify\Support\ImpressionToken::attribute({$expression}); ?>");
+
         $this->publishes([
             __DIR__.'/../config/engageify.php' => config_path(path: 'engageify.php'),
         ], groups: 'engageify-config');
@@ -32,5 +39,12 @@ class EngageifyServiceProvider extends ServiceProvider
         $this->publishesMigrations([
             __DIR__.'/../database/migrations' => database_path(path: 'migrations'),
         ], groups: 'engageify-migrations');
+    }
+
+    protected function registerImpressionRoute(): void
+    {
+        Route::middleware('throttle:'.config(key: 'engageify.impressions.throttle'))
+            ->post((string) config(key: 'engageify.impressions.endpoint'), ImpressionController::class)
+            ->name('engageify.impressions');
     }
 }

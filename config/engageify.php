@@ -70,4 +70,21 @@ return [
         'cooldown' => env(key: 'ENGAGEIFY_VIEW_COOLDOWN', default: 3600),
         'buckets' => env(key: 'ENGAGEIFY_VIEW_BUCKETS', default: false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Impressions
+    |--------------------------------------------------------------------------
+    |
+    | Viewport-impression tracking. `endpoint` is the route the browser posts a
+    | signed token to; `throttle` is its rate limit (Laravel `maxAttempts,
+    | decayMinutes`); `token_ttl` is how long a signed impression token stays
+    | valid, in seconds.
+    |
+    */
+    'impressions' => [
+        'endpoint' => env(key: 'ENGAGEIFY_IMPRESSION_ENDPOINT', default: 'engageify/impressions'),
+        'throttle' => env(key: 'ENGAGEIFY_IMPRESSION_THROTTLE', default: '60,1'),
+        'token_ttl' => env(key: 'ENGAGEIFY_IMPRESSION_TOKEN_TTL', default: 86400),
+    ],
 ];
