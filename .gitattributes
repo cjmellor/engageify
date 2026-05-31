@@ -9,3 +9,6 @@
 # /pint.json          export-ignore
 /tests              export-ignore
 /UPGRADING.md       export-ignore
+# JS toolchain — consumers receive only the built artifact in resources/js/dist
+/resources/js/src   export-ignore
+/package.json       export-ignore
