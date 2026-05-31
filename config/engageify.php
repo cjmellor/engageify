@@ -51,4 +51,23 @@ return [
     |
     */
     'bayesian_minimum' => env(key: 'ENGAGEIFY_BAYESIAN_MINIMUM', default: 5),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Views
+    |--------------------------------------------------------------------------
+    |
+    | View tracking is a count-only subsystem. `cooldown` is the number of
+    | seconds a fingerprint is deduplicated for (repeat views inside the window
+    | don't count). `buckets` opts into a per-day time-series table powering
+    | viewsInLast()/orderByMostViewed($period).
+    |
+    | CAUTION: buckets cannot be backfilled — while off, only the lifetime total
+    | is kept, so enable it from day one if you may ever want windows/trending.
+    |
+    */
+    'views' => [
+        'cooldown' => env(key: 'ENGAGEIFY_VIEW_COOLDOWN', default: 3600),
+        'buckets' => env(key: 'ENGAGEIFY_VIEW_BUCKETS', default: false),
+    ],
 ];

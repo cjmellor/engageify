@@ -121,7 +121,7 @@ trait HasEngagements
                 'value' => $resolved,
             ]);
 
-            EngagementCounter::record(engageable: $this, type: $type, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
+            EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
 
             event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
 
@@ -162,7 +162,7 @@ trait HasEngagements
 
                 EngagementCounter::record(
                     engageable: $this,
-                    type: $type,
+                    type: $type->value,
                     countDelta: -$engagements->count(),
                     valueDelta: -(float) $engagements->sum(fn (Engagement $engagement): float => (float) $engagement->value),
                 );
@@ -423,7 +423,7 @@ trait HasEngagements
         $existing->each(function (Engagement $engagement): void {
             $engagement->delete();
 
-            EngagementCounter::record(engageable: $this, type: $engagement->type, countDelta: -1, valueDelta: -(float) $engagement->value);
+            EngagementCounter::record(engageable: $this, type: $engagement->type->value, countDelta: -1, valueDelta: -(float) $engagement->value);
 
             event(new Disengaged(actor: auth()->user(), engageable: $this, type: $engagement->type));
         });
@@ -440,7 +440,7 @@ trait HasEngagements
             'value' => $resolved,
         ]);
 
-        EngagementCounter::record(engageable: $this, type: $type, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
+        EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
 
         event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
 
@@ -479,7 +479,7 @@ trait HasEngagements
 
                 $existing->update(['value' => $validated]);
 
-                EngagementCounter::record(engageable: $this, type: $type, countDelta: 0, valueDelta: $validated - $previous);
+                EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 0, valueDelta: $validated - $previous);
 
                 $engagement = $existing;
             } else {
@@ -489,7 +489,7 @@ trait HasEngagements
                     'value' => $validated,
                 ]);
 
-                EngagementCounter::record(engageable: $this, type: $type, countDelta: 1, valueDelta: $validated);
+                EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: $validated);
             }
 
             event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
