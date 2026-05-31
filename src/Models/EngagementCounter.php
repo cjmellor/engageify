@@ -43,6 +43,15 @@ class EngagementCounter extends Model
         }
     }
 
+    public static function tally(string $engagementableType, int|string $engagementableId, string $type): void
+    {
+        static::query()->firstOrCreate([
+            'engagementable_type' => $engagementableType,
+            'engagementable_id' => $engagementableId,
+            'type' => $type,
+        ])->increment(column: 'count');
+    }
+
     public static function rebuild(): void
     {
         static::query()->delete();
