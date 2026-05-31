@@ -336,6 +336,38 @@ This will return a Collection of Users who liked the Model.
 
 This works on all 4 fetch methods.
 
+## View Tracking
+
+Views are a **count-only** subsystem — separate from engagement Verbs, with no per-view rows. Add the `HasViews` trait to anything you want to count views on, and record a view explicitly (you decide what counts — skip authors, bots, API hits):
+
+```php
+use Cjmellor\Engageify\Concerns\HasViews;
+
+class Thread extends Model
+{
+    use HasViews;
+}
+```
+
+```php
+$thread->recordView();          // counts once per viewer per cooldown window
+$thread->viewCount();           // lifetime total
+Thread::query()->orderByMostViewed()->get(); // most viewed, all-time
+```
+
+Viewers are deduplicated by a **fingerprint** — the authenticated user id, or a SHA-256 hash of IP + user agent for anonymous traffic (the raw IP is never stored). A repeat view inside `engageify.views.cooldown` seconds doesn't count again.
+
+### Time-windowed views (opt-in)
+
+A lifetime total is always kept. For "views this week"/trending you must opt into a per-day bucket table by setting `engageify.views.buckets` to `true` (or `ENGAGEIFY_VIEW_BUCKETS=true`):
+
+```php
+$thread->viewsInLast(7);                            // views in the last 7 days
+Thread::query()->orderByMostViewed('week')->get();  // most viewed this week
+```
+
+> **Buckets can't be backfilled.** While `buckets` is off, only the lifetime total exists — there's no per-day history to reconstruct. If you might ever want windows or trending, enable buckets from day one.
+
 ## Events
 
 Two generic events are dispatched for every engagement, regardless of the Verb.
