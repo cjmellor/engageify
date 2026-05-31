@@ -277,7 +277,20 @@ Post::query()->orderByEngagementCount(EngagementTypes::Like)->get();
 Post::query()->orderByScore('vote')->get();
 ```
 
-Both accept a direction (`'desc'` by default).
+For Reddit-style ranking:
+
+```php
+// Hot — net score balanced against age (stored, time-anchored; no cron)
+Post::query()->hot()->get();
+
+// Top — items created within a window, ranked by net score ('all' = no window)
+Post::query()->top('week')->get();
+
+// Bayesian — honest average that pulls low-count items toward the global mean
+Film::query()->orderByBayesian(Rating::Stars)->get();
+```
+
+`hot_score` is stored on the counter and recomputed in the same transaction whenever an item's net score changes. All counter columns (`hot_score`, `sum_value`, `count`) plus the engageable's `created_at` are queryable, so a bespoke ranking (e.g. "controversial") is a normal one-line scope. All scopes accept a direction (`'desc'` by default).
 
 ### Actor-Side Queries
 
