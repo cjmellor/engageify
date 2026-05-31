@@ -380,7 +380,19 @@ A *view* is server-detectable; an *impression* (was the element actually on scre
 
 A browser posts that token to the impression endpoint (default `POST /engageify/impressions`), which **verifies the signature** before counting — so only server-rendered, unexpired elements can report an impression. It's layered with the same fingerprint dedup as views and is route-throttled. Forged, tampered, or expired tokens are rejected without counting. Impressions accumulate on the same count-only counter (no per-impression rows).
 
-Configure the endpoint, throttle and token lifetime under `engageify.impressions`. (The viewport-detection script that posts these tokens ships with the frontend integration.)
+#### Enabling the browser tracker
+
+Engageify ships a tiny, pre-built browser script (`resources/js/dist/engageify.iife.js`) — **no npm/build step on your end**. It uses an `IntersectionObserver` with a **dwell threshold**: an element must hold ≥`threshold` of the viewport for ≥`dwell` ms (defaults 50% / 1000ms, the IAB standard) before it posts its token, so a fast scroll-past never counts.
+
+It's delivered by an **opt-in middleware** that injects the script before `</body>` on HTML responses, substituting your endpoint and thresholds. It's **off by default** (silently rewriting every response should be deliberate) — turn it on with:
+
+```dotenv
+ENGAGEIFY_IMPRESSION_INJECT=true
+```
+
+or set `engageify.impressions.inject_script` to `true`. Tune detection with `engageify.impressions.threshold` (0–1) and `dwell` (ms). Mark elements with `@impression($model)` and they'll be tracked automatically.
+
+(Prefer to wire it up yourself? Leave the middleware off and include `resources/js/dist/engageify.iife.js` however you like.)
 
 ## Events
 
