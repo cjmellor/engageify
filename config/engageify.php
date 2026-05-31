@@ -86,5 +86,16 @@ return [
         'endpoint' => env(key: 'ENGAGEIFY_IMPRESSION_ENDPOINT', default: 'engageify/impressions'),
         'throttle' => env(key: 'ENGAGEIFY_IMPRESSION_THROTTLE', default: '60,1'),
         'token_ttl' => env(key: 'ENGAGEIFY_IMPRESSION_TOKEN_TTL', default: 86400),
+
+        /*
+        | Inject the impression-tracking script into HTML responses. Off by
+        | default — rewriting every HTML response must be a deliberate switch.
+        | `threshold` is the fraction of the element that must be visible and
+        | `dwell` the milliseconds it must stay visible before it counts (IAB
+        | standard: 50% for 1000ms).
+        */
+        'inject_script' => env(key: 'ENGAGEIFY_IMPRESSION_INJECT', default: false),
+        'threshold' => env(key: 'ENGAGEIFY_IMPRESSION_THRESHOLD', default: 0.5),
+        'dwell' => env(key: 'ENGAGEIFY_IMPRESSION_DWELL', default: 1000),
     ],
 ];
