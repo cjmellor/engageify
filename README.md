@@ -391,6 +391,8 @@ $thread->viewsInLast(7);                            // views in the last 7 days
 Thread::query()->orderByMostViewed('week')->get();  // most viewed this week
 ```
 
+`viewsInLast($days)` counts exactly `$days` daily buckets **ending today** — `viewsInLast(7)` is today plus the previous six days, not eight. `orderByMostViewed($period)` ranks by the same inclusive window; `$period` must be one of `day`, `week`, `month`, or `year` (mapped to 1 / 7 / 30 / 365 days), and any other value throws an `InvalidViewPeriodException`. Called with no argument it ranks by the lifetime total.
+
 > **Buckets can't be backfilled.** While `buckets` is off, only the lifetime total exists — there's no per-day history to reconstruct. If you might ever want windows or trending, enable buckets from day one.
 
 ### Impressions (viewport)

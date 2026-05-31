@@ -4,13 +4,25 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Concerns;
 
+use Cjmellor\Engageify\Exceptions\InvalidViewPeriodException;
 use Cjmellor\Engageify\Models\EngagementCounter;
 use Cjmellor\Engageify\Models\ViewBucket;
 use Cjmellor\Engageify\Support\ViewRecorder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 trait HasViews
 {
+    /**
+     * @var array<string, int>
+     */
+    protected const array VIEW_WINDOW_DAYS = [
+        'day' => 1,
+        'week' => 7,
+        'month' => 30,
+        'year' => 365,
+    ];
+
     public function recordView(): void
     {
         ViewRecorder::record(viewable: $this);
@@ -30,7 +42,7 @@ trait HasViews
         return (int) ViewBucket::query()
             ->where('viewable_type', $this->getMorphClass())
             ->where('viewable_id', $this->getKey())
-            ->where('date', '>=', today()->subDays($days))
+            ->where('date', '>=', $this->viewWindowFloor($days))
             ->sum(column: 'count');
     }
 
@@ -63,7 +75,7 @@ trait HasViews
                 ViewBucket::query()
                     ->selectRaw('viewable_id, sum(count) as views')
                     ->where('viewable_type', $model->getMorphClass())
-                    ->where('date', '>=', today()->sub("1 {$period}"))
+                    ->where('date', '>=', $this->viewWindowFloor($this->periodToDays($period)))
                     ->groupBy('viewable_id'),
                 'view_window',
                 'view_window.viewable_id',
@@ -72,5 +84,16 @@ trait HasViews
             )
             ->orderBy('view_window.views', $direction)
             ->select("{$model->getTable()}.*");
+    }
+
+    protected function viewWindowFloor(int $days): Carbon
+    {
+        return today()->subDays($days - 1);
+    }
+
+    protected function periodToDays(string $period): int
+    {
+        return self::VIEW_WINDOW_DAYS[$period]
+            ?? throw InvalidViewPeriodException::unsupported($period, array_keys(self::VIEW_WINDOW_DAYS));
     }
 }
