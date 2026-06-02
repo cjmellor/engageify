@@ -8,6 +8,7 @@ use Cjmellor\Engageify\Commands\RecountCommand;
 use Cjmellor\Engageify\Http\Controllers\ImpressionController;
 use Cjmellor\Engageify\Http\Middleware\InjectImpressionScript;
 use Cjmellor\Engageify\Support\ImpressionScript;
+use Cjmellor\Engageify\Support\TypeResolver;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,8 @@ class EngageifyServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        TypeResolver::assertUniqueValues();
+
         if ($this->app->runningInConsole()) {
             $this->commands(commands: [
                 RecountCommand::class,

@@ -11,7 +11,8 @@ return [
     |
     | The string-backed enum that defines the available engagement Verbs. Ship
     | your own enum implementing Cjmellor\Engageify\Contracts\EngagementType to
-    | extend the vocabulary — no migration required.
+    | extend the vocabulary — no migration required. Pass an array of enums to
+    | mix rateable, exclusive and plain Verbs in one app (values must be unique).
     |
     */
     'types' => EngagementTypes::class,

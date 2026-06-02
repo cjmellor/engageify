@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cjmellor\Engageify\Models;
 
+use Cjmellor\Engageify\Casts\EngagementTypeCast;
 use Cjmellor\Engageify\Contracts\EngagementType;
 use Cjmellor\Engageify\Database\Factories\EngagementFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -43,7 +44,7 @@ class Engagement extends Model
     protected function casts(): array
     {
         return [
-            'type' => config(key: 'engageify.types'),
+            'type' => EngagementTypeCast::class,
             'value' => 'decimal:2',
         ];
     }
