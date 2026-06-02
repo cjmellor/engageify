@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Exceptions\AmbiguousEngagementType;
+use Cjmellor\Engageify\Exceptions\InvalidEngagementEnum;
+use Cjmellor\Engageify\Exceptions\UnknownEngagementType;
+use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Support\TypeResolver;
 use Cjmellor\Engageify\Tests\Fixtures\Enums\Clap;
 use Cjmellor\Engageify\Tests\Fixtures\Enums\Mood;
@@ -69,4 +72,20 @@ test('a single enum (not wrapped in an array) still works', function (): void {
 
     expect($this->user->engagementCount(Reaction::Bookmark))->toBe(1)
         ->and($this->user->engagements()->first()->type)->toBe(Reaction::Bookmark);
+});
+
+test('writing an Engagement with an unknown verb value is rejected at write time', function (): void {
+    config(['engageify.types' => Reaction::class]);
+
+    expect(fn (): Engagement => $this->user->engagements()->create([
+        'user_id' => $this->user->getKey(),
+        'type' => 'definitely-not-a-verb',
+    ]))->toThrow(UnknownEngagementType::class);
+});
+
+test('registering a class that is not an EngagementType enum is rejected with a clear error', function (): void {
+    config(['engageify.types' => [Reaction::class, Engagement::class]]);
+
+    expect(fn () => TypeResolver::assertUniqueValues())
+        ->toThrow(InvalidEngagementEnum::class);
 });

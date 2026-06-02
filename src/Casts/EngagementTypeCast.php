@@ -26,8 +26,12 @@ class EngagementTypeCast implements CastsAttributes
     /**
      * @param  array<string, mixed>  $attributes
      */
-    public function set(Model $model, string $key, mixed $value, array $attributes): ?string
+    public function set(Model $model, string $key, mixed $value, array $attributes): string
     {
-        return $value instanceof BackedEnum ? (string) $value->value : $value;
+        if (! $value instanceof BackedEnum) {
+            $value = TypeResolver::resolve(value: (string) $value);
+        }
+
+        return (string) $value->value;
     }
 }

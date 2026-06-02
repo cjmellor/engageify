@@ -140,7 +140,9 @@ $film->engage(Vote::Up);
 $film->like();
 ```
 
-`engage()`, the built-in helpers (`like()`, `upvote()`, …), the stored-type cast and exclusive-group lookups all resolve a Verb from whichever registered enum defines it. A single enum (the default) keeps working unchanged. The one rule: registered enums must use **unique backed values** — a collision is rejected at boot with an `AmbiguousEngagementType` exception.
+`engage()`, the built-in helpers (`like()`, `upvote()`, …), the stored-type cast and exclusive-group lookups all resolve a Verb from whichever registered enum defines it. A single enum (the default) keeps working unchanged.
+
+The registry is validated **once at boot**: every entry must be a backed enum implementing `EngagementType` (otherwise `InvalidEngagementEnum`), and their values must be **collectively unique** (otherwise `AmbiguousEngagementType`). Because the check runs at boot, swapping `engageify.types` at runtime bypasses it.
 
 ### Weighted Verbs & Engagement Values
 

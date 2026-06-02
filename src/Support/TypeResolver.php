@@ -6,6 +6,7 @@ namespace Cjmellor\Engageify\Support;
 
 use Cjmellor\Engageify\Contracts\EngagementType;
 use Cjmellor\Engageify\Exceptions\AmbiguousEngagementType;
+use Cjmellor\Engageify\Exceptions\InvalidEngagementEnum;
 use Cjmellor\Engageify\Exceptions\UnknownEngagementType;
 
 class TypeResolver
@@ -29,6 +30,10 @@ class TypeResolver
         $owner = [];
 
         foreach (self::enums() as $enum) {
+            if (! enum_exists($enum) || ! is_subclass_of($enum, EngagementType::class)) {
+                throw InvalidEngagementEnum::notAnEnum(class: $enum);
+            }
+
             foreach ($enum::cases() as $case) {
                 if (isset($owner[$case->value])) {
                     throw AmbiguousEngagementType::value(value: $case->value, enums: [$owner[$case->value], $enum]);
