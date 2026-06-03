@@ -42,12 +42,7 @@ class EngagementCounter extends Model
             if ((float) $valueDelta !== 0.0) {
                 $counter->refresh();
 
-                $sum = (float) $counter->sum_value;
-                $createdAt = $engageable->getAttribute($engageable->getCreatedAtColumn() ?? 'created_at');
-
-                $counter->hot_score = $sum !== 0.0 && $createdAt instanceof DateTimeInterface
-                    ? HotScore::calculate(score: $sum, createdAt: $createdAt)
-                    : 0;
+                $counter->hot_score = self::hotScoreFor(sum: (float) $counter->sum_value, engageable: $engageable);
                 $counter->save();
             }
         });
@@ -80,11 +75,33 @@ class EngagementCounter extends Model
                     'sum_value' => (float) $row->aggregate_sum,
                 ]);
             });
+
+        static::query()
+            ->where('sum_value', '!=', 0)
+            ->with('engagementable')
+            ->get()
+            ->each(function (self $counter): void {
+                $engageable = $counter->engagementable;
+
+                if ($engageable instanceof Model) {
+                    $counter->hot_score = self::hotScoreFor(sum: (float) $counter->sum_value, engageable: $engageable);
+                    $counter->save();
+                }
+            });
     }
 
     public function engagementable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    protected static function hotScoreFor(float $sum, Model $engageable): float|int
+    {
+        $createdAt = $engageable->getAttribute($engageable->getCreatedAtColumn() ?? 'created_at');
+
+        return $sum !== 0.0 && $createdAt instanceof DateTimeInterface
+            ? HotScore::calculate(score: $sum, createdAt: $createdAt)
+            : 0;
     }
 
     /**
