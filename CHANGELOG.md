@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0 - Unreleased
+## v2.0.0 - 2026-06-03
 
 A major release adding ratings, view & impression tracking, Hot/Top ranking, weighted and custom engagement Verbs, and actor-side queries. **Read [`UPGRADING.md`](UPGRADING.md) before upgrading from v1** — there are breaking changes.
 
