@@ -2,7 +2,7 @@
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/cjmellor/engageify/run-pest.yml?branch=main&label=tests&style=for-the-badge&color=rgb%28134%20239%20128%29)](https://github.com/cjmellor/engageify/actions/workflows/run-pest.yml?query=branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/cjmellor/engageify.svg?color=rgb%28249%20115%2022%29&style=for-the-badge)](https://packagist.org/packages/cjmellor/engageify)
 ![Packagist PHP Version](https://img.shields.io/packagist/dependency-v/cjmellor/engageify/php?color=rgb%28165%20180%20252%29&logo=php&logoColor=rgb%28165%20180%20252%29&style=for-the-badge)
-![Laravel Version](https://img.shields.io/badge/laravel-^10-rgb(235%2068%2050)?style=for-the-badge&logo=laravel)
+![Laravel Version](https://img.shields.io/badge/laravel-12.x%20%7C%2013.x-rgb(235%2068%2050)?style=for-the-badge&logo=laravel)
 
 Engageify is a Laravel package that allows you to integrate engagement features like user reactions (likes, upvotes) to your models.
 
@@ -14,6 +14,13 @@ You can install the package via composer:
 
 ```bash
 composer require cjmellor/engageify
+```
+
+Publish and run the migrations. This creates the `engagements`, `engagement_counters`, and `view_buckets` tables the package needs:
+
+```bash
+php artisan vendor:publish --tag="engageify-migrations"
+php artisan migrate
 ```
 
 Publish the config file (optional)
@@ -45,11 +52,13 @@ v2 changes how engagement counts are stored and read. **If you are upgrading an 
 
 > **Heads-up:** the in-memory cache layer from v1 has been removed. Counts are kept in step inside the same database transaction as every engage/disengage, so they are always fresh — the `allow_caching` / `cache_duration` config keys no longer exist, and there is nothing to invalidate.
 
+v2 also raises the minimum requirements to **PHP 8.3** and **Laravel 12**, removes the `Engageify` facade, and replaces the five reaction-specific events with two generic ones. If you depended on any of those, see [`UPGRADING.md`](UPGRADING.md) before upgrading.
+
 See [`UPGRADING.md`](UPGRADING.md) for the full checklist.
 
 ## Usage
 
-For Models you wish to have engagement features (likes/upvotes), use the Engageable trait.
+For Models you wish to have engagement features (likes/upvotes), use the `HasEngagements` trait.
 
 ```php
 <?php
@@ -86,7 +95,7 @@ A generic `Engaged` event is dispatched on each reaction, carrying the actor, th
 
 #### Multiple Reactions
 
-By default, a User can only react once to a Model. If you wish to allow multiple reactions, you can do so by setting the `engagement.allow_multiple_engagements` config value to `true`.
+By default, a User can only react once to a Model. If you wish to allow multiple reactions, you can do so by setting the `engageify.allow_multiple_engagements` config value to `true` (or the `ENGAGEIFY_MULTIPLE_ENGAGEMENTS` environment variable).
 
 ### Custom Engagement Types
 
@@ -285,7 +294,7 @@ $comment->unlike();
 
 When a Model is "unliked", a generic `Disengaged` event is fired.
 
-There is also a convenient `toggle()` method that will toggle between "like" and "unlike".
+There is also a convenient `toggleLike()` method that will toggle between "like" and "unlike".
 
 ```php
 $comment->toggleLike();
@@ -380,7 +389,7 @@ Instead of just fetching the amount of engagements, you can fetch the Users who 
 
 ```php
 $post->likes(showUsers: true);
-````
+```
 
 This will return a Collection of Users who liked the Model.
 
