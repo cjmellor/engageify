@@ -452,9 +452,8 @@ trait HasEngagements
      */
     protected function exclusiveGroupValues(string $group): array
     {
-        $enum = TypeResolver::enum();
-
-        return collect($enum::cases())
+        return collect(TypeResolver::enums())
+            ->flatMap(fn (string $enum): array => $enum::cases())
             ->filter(fn (EngagementType $case): bool => $case instanceof Exclusive && $case->group() === $group)
             ->map(fn (EngagementType $case): string => $case->value)
             ->values()

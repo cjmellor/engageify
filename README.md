@@ -117,7 +117,32 @@ $post->engagementCount(Reaction::Bookmark); // 1
 $post->disengage(Reaction::Bookmark);
 ```
 
-Passing a Verb that does not belong to the configured enum throws an `UnknownEngagementType` exception.
+Passing a Verb that belongs to no registered enum throws an `UnknownEngagementType` exception.
+
+#### Mixing several Verb enums
+
+A single enum is all-rateable, all-exclusive, or all-plain (PHP enums implement interfaces at the enum level). To use **different kinds of Verb together** — say star ratings, up/down votes and plain likes in the same app — register every Verb enum as an array:
+
+```php
+// config/engageify.php
+'types' => [
+    App\Enums\Stars::class,   // Rateable
+    App\Enums\Vote::class,    // Exclusive + HasWeight
+    App\Enums\Reaction::class, // plain (like, bookmark…)
+],
+```
+
+Then engage any of them on the same model, with no per-call configuration:
+
+```php
+$film->engage(Stars::Rating, 4);
+$film->engage(Vote::Up);
+$film->like();
+```
+
+`engage()`, the built-in helpers (`like()`, `upvote()`, …), the stored-type cast and exclusive-group lookups all resolve a Verb from whichever registered enum defines it. A single enum (the default) keeps working unchanged.
+
+The registry is validated **once at boot**: every entry must be a backed enum implementing `EngagementType` (otherwise `InvalidEngagementEnum`), and their values must be **collectively unique** (otherwise `AmbiguousEngagementType`). Because the check runs at boot, swapping `engageify.types` at runtime bypasses it.
 
 ### Weighted Verbs & Engagement Values
 

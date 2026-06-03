@@ -10,18 +10,18 @@ use Exception;
 class UnknownEngagementType extends Exception
 {
     /**
-     * @param  class-string<EngagementType>  $enum
+     * @param  list<class-string<EngagementType>>  $enums
      */
-    public static function value(string $value, string $enum): self
+    public static function value(string $value, array $enums): self
     {
-        return new self(message: "The configured engagement enum [{$enum}] has no case for value [{$value}].");
+        return new self(message: "No registered engagement enum has a case for value [{$value}]. Registered: [".implode(', ', $enums).'].');
     }
 
     /**
-     * @param  class-string<EngagementType>  $enum
+     * @param  list<class-string<EngagementType>>  $enums
      */
-    public static function instance(EngagementType $type, string $enum): self
+    public static function instance(EngagementType $type, array $enums): self
     {
-        return new self(message: 'The engagement type ['.$type::class.'] does not belong to the configured enum ['.$enum.'].');
+        return new self(message: 'The engagement type ['.$type::class.'] is not a registered verb enum. Registered: ['.implode(', ', $enums).'].');
     }
 }
