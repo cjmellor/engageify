@@ -9,7 +9,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Lint with Pint
         uses: aglipanci/laravel-pint-action@61f2bc4f4d5da076029d370fa2f268fd6b298041 # 2.3.1
