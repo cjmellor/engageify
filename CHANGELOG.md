@@ -1,5 +1,39 @@
 # Changelog
 
+## v2.1.0 - 2026-07-27
+
+### Engaging as a specific actor
+
+Engagements previously resolved the acting user from `auth()` alone, so applications whose authenticated principal is not the model that owns engagements — multi-tenant setups, impersonation, queued jobs, seeders — could not use the trait's mutators at all.
+
+`engage()`, `disengage()` and the convenience verbs (`like`, `dislike`, `upvote`, `downvote`, `unlike`, `toggleLike`) now take an optional trailing `actor`, defaulting to the authenticated user as before:
+
+```php
+$post->engage(Reaction::Bookmark, actor: $user);
+$post->like(actor: $user);
+$post->unlike(actor: $user);
+
+```
+The resolved actor is what gets written to `user_id`, what scopes the duplicate-engagement guard, the exclusive-group flip and the rating upsert, and what the `Engaged`/`Disengaged` events carry.
+
+#### Fixed
+
+Exclusive-group flips dispatched events reporting `auth()->user()` while deleting rows keyed on `auth()->id()`. Those are now consistently the same actor — a correctness fix that applies even when no explicit actor is passed.
+
+Engaging with no actor and nobody authenticated now throws `UserCannotEngageException` with a clear message, rather than failing deeper in the stack.
+
+#### Upgrading
+
+Nothing to do. The actor parameter is a new optional trailing argument throughout, so this is a drop-in upgrade from v2.0.0 with no migration and no config change.
+
+`withUserEngagement()` keeps its existing `$user` parameter name rather than being renamed to `$actor`, so named-argument callers are unaffected. It takes the same model you would pass as `actor:`.
+
+#### Maintenance
+
+The development dependency lock was refreshed onto current releases, clearing the open Dependabot alerts against `composer.lock`. These were all development-only transitive dependencies pulled in through `orchestra/testbench` — the package requires only `illuminate/database` and `illuminate/support`, and consumers resolve their own dependencies, so no installation of engageify was affected.
+
+**Full Changelog**: https://github.com/cjmellor/engageify/compare/v2.0.0...v2.1.0
+
 ## v2.0.0 - 2026-06-03
 
 A major release adding ratings, view & impression tracking, Hot/Top ranking, weighted and custom engagement Verbs, and actor-side queries. **Read [`UPGRADING.md`](UPGRADING.md) before upgrading from v1** — there are breaking changes.
