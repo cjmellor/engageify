@@ -307,7 +307,7 @@ The "like" reaction has some additional functionality. A "like" can be "unliked"
 $comment->unlike();
 ```
 
-When a Model is "unliked", a generic `Disengaged` event is fired.
+When a Model is "unliked", a generic `Disengaged` event is fired. Unliking something that was never liked is a no-op — nothing is deleted, the counters are untouched, and no event is dispatched.
 
 There is also a convenient `toggleLike()` method that will toggle between "like" and "unlike".
 
@@ -491,7 +491,7 @@ public EngagementType $type,
 public Engagement $engagement,
 ```
 
-`Cjmellor\Engageify\Events\Disengaged` is dispatched when an engagement is removed (e.g. an "unlike"):
+`Cjmellor\Engageify\Events\Disengaged` is dispatched when an engagement is actually removed (e.g. an "unlike"). It is not dispatched when there was nothing to remove, so a listener can treat every event as a real deletion:
 
 ```php
 public Model $actor,
