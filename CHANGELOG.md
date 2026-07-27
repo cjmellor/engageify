@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.1.1 - 2026-07-27
+
+A patch release fixing two correctness bugs in `HasEngagements`. No API or migration changes.
+
+### Fixed
+
+- **`Disengaged` is no longer dispatched when nothing was removed.** `disengage()` guarded the delete and the counter adjustment behind a non-empty check but fired the event unconditionally, so disengaging something that was never engaged emitted a phantom event. This brings it in line with `flipExclusive()`, which only ever emitted the event for rows it actually deleted. Listeners can now treat every `Disengaged` as a real deletion.
+- **Closed a check-then-insert race in `engage()`.** With `allow_multiple_engagements = false` the duplicate guard ran outside the transaction, so concurrent requests could both pass it, both insert, and double-count the counter. The check now runs inside the transaction under `lockForUpdate()`, matching `rate()` and `flipExclusive()`. Note that gap-locking prevents the phantom insert on MySQL and SQLite serialises writes, but PostgreSQL does not gap-lock a `SELECT ... FOR UPDATE` matching zero rows.
+
+**Full Changelog**: https://github.com/cjmellor/engageify/compare/v2.1.0...v2.1.1
+
 ## v2.1.0 - 2026-07-27
 
 ### Engaging as a specific actor
@@ -12,6 +23,7 @@ Engagements previously resolved the acting user from `auth()` alone, so applicat
 $post->engage(Reaction::Bookmark, actor: $user);
 $post->like(actor: $user);
 $post->unlike(actor: $user);
+
 
 ```
 The resolved actor is what gets written to `user_id`, what scopes the duplicate-engagement guard, the exclusive-group flip and the rating upsert, and what the `Engaged`/`Disengaged` events carry.
