@@ -42,36 +42,36 @@ trait HasEngagements
         return $this->morphMany(related: EngagementCounter::class, name: 'engagementable');
     }
 
-    public function like(): Model
+    public function like(?Model $actor = null): Model
     {
-        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Like->value));
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Like->value), actor: $actor);
     }
 
-    public function dislike(): Model
+    public function dislike(?Model $actor = null): Model
     {
-        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Dislike->value));
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Dislike->value), actor: $actor);
     }
 
-    public function upvote(): Model
+    public function upvote(?Model $actor = null): Model
     {
-        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Upvote->value));
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Upvote->value), actor: $actor);
     }
 
-    public function downvote(): Model
+    public function downvote(?Model $actor = null): Model
     {
-        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value));
+        return $this->engage(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value), actor: $actor);
     }
 
-    public function unlike(): void
+    public function unlike(?Model $actor = null): void
     {
-        $this->disengage(type: TypeResolver::resolve(value: EngagementTypes::Like->value));
+        $this->disengage(type: TypeResolver::resolve(value: EngagementTypes::Like->value), actor: $actor);
     }
 
-    public function toggleLike(): void
+    public function toggleLike(?Model $actor = null): void
     {
-        $this->hasEngagedWithType(type: TypeResolver::resolve(value: EngagementTypes::Like->value))
-            ? $this->unlike()
-            : $this->like();
+        $this->hasEngagedWithType(type: TypeResolver::resolve(value: EngagementTypes::Like->value), actor: $actor)
+            ? $this->unlike(actor: $actor)
+            : $this->like(actor: $actor);
     }
 
     public function likes(bool $showUsers = false): Collection|int
@@ -94,36 +94,38 @@ trait HasEngagements
         return $this->getEngagementCount(type: TypeResolver::resolve(value: EngagementTypes::Downvote->value), showUsers: $showUsers);
     }
 
-    public function engage(EngagementType $type, int|float|null $value = null): Model
+    public function engage(EngagementType $type, int|float|null $value = null, ?Model $actor = null): Model
     {
         $type = TypeResolver::ensure(type: $type);
 
         if ($type instanceof Exclusive) {
-            return $this->engageExclusive(type: $type, value: $value);
+            return $this->engageExclusive(type: $type, value: $value, actor: $actor);
         }
 
         if ($type instanceof Rateable) {
-            return $this->rate(type: $type, value: $value);
+            return $this->rate(type: $type, value: $value, actor: $actor);
         }
 
+        $actor = $this->resolveActor(actor: $actor);
+
         throw_if(
-            config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type),
+            config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type, actor: $actor),
             UserCannotEngageException::class,
             'This model has already been engaged'
         );
 
         $resolved = $this->resolveEngagementValue(type: $type, value: $value);
 
-        return DB::transaction(function () use ($type, $resolved): Engagement {
+        return DB::transaction(function () use ($type, $resolved, $actor): Engagement {
             $engagement = $this->engagements()->create([
-                'user_id' => auth()->id(),
+                'user_id' => $actor->getKey(),
                 'type' => $type,
                 'value' => $resolved,
             ]);
 
             EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
 
-            event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
+            event(new Engaged(actor: $actor, engageable: $this, type: $type, engagement: $engagement));
 
             return $engagement;
         });
@@ -149,16 +151,18 @@ trait HasEngagements
         return $count === 0 ? 0.0 : $this->counterSum(type: $type) / $count;
     }
 
-    public function disengage(EngagementType $type): void
+    public function disengage(EngagementType $type, ?Model $actor = null): void
     {
-        DB::transaction(function () use ($type): void {
+        $actor = $this->resolveActor(actor: $actor);
+
+        DB::transaction(function () use ($type, $actor): void {
             $engagements = $this->engagements()
-                ->whereUserId(auth()->id())
+                ->whereUserId($actor->getKey())
                 ->whereType($type)
                 ->get();
 
             if ($engagements->isNotEmpty()) {
-                $this->engagements()->whereUserId(auth()->id())->whereType($type)->delete();
+                $this->engagements()->whereUserId($actor->getKey())->whereType($type)->delete();
 
                 EngagementCounter::record(
                     engageable: $this,
@@ -168,7 +172,7 @@ trait HasEngagements
                 );
             }
 
-            event(new Disengaged(actor: auth()->user(), engageable: $this, type: $type));
+            event(new Disengaged(actor: $actor, engageable: $this, type: $type));
         });
     }
 
@@ -405,27 +409,31 @@ trait HasEngagements
             ->where('user_id', $userKey);
     }
 
-    protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
+    protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value, ?Model $actor = null): Engagement
     {
-        return DB::transaction(fn (): Engagement => $this->flipExclusive(type: $type, value: $value));
+        $actor = $this->resolveActor(actor: $actor);
+
+        return DB::transaction(fn (): Engagement => $this->flipExclusive(type: $type, value: $value, actor: $actor));
     }
 
-    protected function flipExclusive(EngagementType&Exclusive $type, int|float|null $value): Engagement
+    protected function flipExclusive(EngagementType&Exclusive $type, int|float|null $value, ?Model $actor = null): Engagement
     {
+        $actor = $this->resolveActor(actor: $actor);
+
         $existing = $this->engagements()
-            ->whereUserId(auth()->id())
+            ->whereUserId($actor->getKey())
             ->whereIn('type', $this->exclusiveGroupValues(group: $type->group()))
             ->lockForUpdate()
             ->get();
 
         $active = $existing->first(fn (Engagement $engagement): bool => $engagement->type === $type);
 
-        $existing->each(function (Engagement $engagement): void {
+        $existing->each(function (Engagement $engagement) use ($actor): void {
             $engagement->delete();
 
             EngagementCounter::record(engageable: $this, type: $engagement->type->value, countDelta: -1, valueDelta: -(float) $engagement->value);
 
-            event(new Disengaged(actor: auth()->user(), engageable: $this, type: $engagement->type));
+            event(new Disengaged(actor: $actor, engageable: $this, type: $engagement->type));
         });
 
         if ($active instanceof Engagement) {
@@ -435,14 +443,14 @@ trait HasEngagements
         $resolved = $this->resolveEngagementValue(type: $type, value: $value);
 
         $engagement = $this->engagements()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $actor->getKey(),
             'type' => $type,
             'value' => $resolved,
         ]);
 
         EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: (float) ($resolved ?? 0));
 
-        event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
+        event(new Engaged(actor: $actor, engageable: $this, type: $type, engagement: $engagement));
 
         return $engagement;
     }
@@ -460,15 +468,17 @@ trait HasEngagements
             ->all();
     }
 
-    protected function rate(EngagementType&Rateable $type, int|float|null $value): Engagement
+    protected function rate(EngagementType&Rateable $type, int|float|null $value, ?Model $actor = null): Engagement
     {
         throw_if($value === null, InvalidRatingException::valueRequired(type: $type));
 
         $validated = RatingScale::validate(type: $type, value: $value);
 
-        return DB::transaction(function () use ($type, $validated): Engagement {
+        $actor = $this->resolveActor(actor: $actor);
+
+        return DB::transaction(function () use ($type, $validated, $actor): Engagement {
             $existing = $this->engagements()
-                ->whereUserId(auth()->id())
+                ->whereUserId($actor->getKey())
                 ->whereType($type)
                 ->lockForUpdate()
                 ->first();
@@ -483,7 +493,7 @@ trait HasEngagements
                 $engagement = $existing;
             } else {
                 $engagement = $this->engagements()->create([
-                    'user_id' => auth()->id(),
+                    'user_id' => $actor->getKey(),
                     'type' => $type,
                     'value' => $validated,
                 ]);
@@ -491,7 +501,7 @@ trait HasEngagements
                 EngagementCounter::record(engageable: $this, type: $type->value, countDelta: 1, valueDelta: $validated);
             }
 
-            event(new Engaged(actor: auth()->user(), engageable: $this, type: $type, engagement: $engagement));
+            event(new Engaged(actor: $actor, engageable: $this, type: $type, engagement: $engagement));
 
             return $engagement;
         });
@@ -509,12 +519,21 @@ trait HasEngagements
         return $type instanceof HasWeight || $type instanceof Rateable;
     }
 
-    protected function hasEngagedWithType(EngagementType $type): bool
+    protected function hasEngagedWithType(EngagementType $type, ?Model $actor = null): bool
     {
         return $this->engagements()
-            ->whereUserId(auth()->id())
+            ->whereUserId($this->resolveActor(actor: $actor)->getKey())
             ->whereType($type)
             ->exists();
+    }
+
+    protected function resolveActor(?Model $actor = null): Model
+    {
+        $actor ??= auth()->user();
+
+        throw_unless($actor instanceof Model, UserCannotEngageException::class, 'No actor was given and no user is authenticated');
+
+        return $actor;
     }
 
     protected function getEngagementCount(EngagementType $type, bool $showUsers = false): Collection|int
