@@ -1,5 +1,24 @@
 # Changelog
 
+## v2.1.1 - 2026-07-27
+
+A patch release fixing two correctness bugs in `HasEngagements`. No API or migration changes.
+
+### Fixed
+
+- **`Disengaged` is no longer dispatched when nothing was removed.** `disengage()` guarded the delete and the counter adjustment behind a non-empty check but fired the event unconditionally, so disengaging something that was never engaged emitted a phantom event. This brings it in line with `flipExclusive()`, which only ever emitted the event for rows it actually deleted. Listeners can now treat every `Disengaged` as a real deletion.
+- **Closed a check-then-insert race in `engage()`.** With `allow_multiple_engagements = false` the duplicate guard ran outside the transaction, so concurrent requests could both pass it, both insert, and double-count the counter. The check now runs inside the transaction under `lockForUpdate()`, matching `rate()` and `flipExclusive()`. Note that gap-locking prevents the phantom insert on MySQL and SQLite serialises writes, but PostgreSQL does not gap-lock a `SELECT ... FOR UPDATE` matching zero rows.
+
+## v2.1.0 - 2026-07-27
+
+### Added
+
+- **An explicit actor on every engagement path.** `engage()`, `disengage()`, and the Verb helpers now take an optional trailing `actor`, defaulting to the authenticated user. Applications whose authenticated principal is not the model that owns engagements could not use the trait at all before this. The resolved actor is what is written to `user_id`, what scopes the duplicate guard, the exclusive-group flip and the rating upsert, and what the `Engaged` / `Disengaged` events carry — previously the events reported `auth()->user()` even where the rows were keyed on `auth()->id()`.
+
+### Changed
+
+- **Refreshed `composer.lock` onto patched releases**, resolving the open Dependabot alerts. These are development-only transitive dependencies pulled in through Testbench — the package itself requires only `illuminate/database` and `illuminate/support` — so consumers were never exposed.
+
 ## v2.0.0 - 2026-06-03
 
 A major release adding ratings, view & impression tracking, Hot/Top ranking, weighted and custom engagement Verbs, and actor-side queries. **Read [`UPGRADING.md`](UPGRADING.md) before upgrading from v1** — there are breaking changes.
