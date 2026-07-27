@@ -108,15 +108,15 @@ trait HasEngagements
 
         $actor = $this->resolveActor(actor: $actor);
 
-        throw_if(
-            config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type, actor: $actor),
-            UserCannotEngageException::class,
-            'This model has already been engaged'
-        );
-
         $resolved = $this->resolveEngagementValue(type: $type, value: $value);
 
         return DB::transaction(function () use ($type, $resolved, $actor): Engagement {
+            throw_if(
+                config(key: 'engageify.allow_multiple_engagements') === false && $this->hasEngagedWithType(type: $type, actor: $actor, lock: true),
+                UserCannotEngageException::class,
+                'This model has already been engaged'
+            );
+
             $engagement = $this->engagements()->create([
                 'user_id' => $actor->getKey(),
                 'type' => $type,
@@ -161,16 +161,18 @@ trait HasEngagements
                 ->whereType($type)
                 ->get();
 
-            if ($engagements->isNotEmpty()) {
-                $this->engagements()->whereUserId($actor->getKey())->whereType($type)->delete();
-
-                EngagementCounter::record(
-                    engageable: $this,
-                    type: $type->value,
-                    countDelta: -$engagements->count(),
-                    valueDelta: -(float) $engagements->sum(fn (Engagement $engagement): float => (float) $engagement->value),
-                );
+            if ($engagements->isEmpty()) {
+                return;
             }
+
+            $this->engagements()->whereUserId($actor->getKey())->whereType($type)->delete();
+
+            EngagementCounter::record(
+                engageable: $this,
+                type: $type->value,
+                countDelta: -$engagements->count(),
+                valueDelta: -(float) $engagements->sum(fn (Engagement $engagement): float => (float) $engagement->value),
+            );
 
             event(new Disengaged(actor: $actor, engageable: $this, type: $type));
         });
@@ -519,11 +521,12 @@ trait HasEngagements
         return $type instanceof HasWeight || $type instanceof Rateable;
     }
 
-    protected function hasEngagedWithType(EngagementType $type, ?Model $actor = null): bool
+    protected function hasEngagedWithType(EngagementType $type, ?Model $actor = null, bool $lock = false): bool
     {
         return $this->engagements()
             ->whereUserId($this->resolveActor(actor: $actor)->getKey())
             ->whereType($type)
+            ->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())
             ->exists();
     }
 
