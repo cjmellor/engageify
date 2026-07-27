@@ -153,6 +153,21 @@ $film->like();
 
 The registry is validated **once at boot**: every entry must be a backed enum implementing `EngagementType` (otherwise `InvalidEngagementEnum`), and their values must be **collectively unique** (otherwise `AmbiguousEngagementType`). Because the check runs at boot, swapping `engageify.types` at runtime bypasses it.
 
+### Engaging as a specific actor
+
+By default the engaging actor is `auth()->user()`. Applications where the authenticated principal is not the model that owns engagements — multi-tenant setups, impersonation, queued jobs, seeders — can pass the actor explicitly:
+
+```php
+$post->engage(Reaction::Bookmark, actor: $user);
+$post->disengage(Reaction::Bookmark, actor: $user);
+
+$post->like(actor: $user);
+$post->unlike(actor: $user);
+$post->toggleLike(actor: $user);
+```
+
+The actor is written to `engagements.user_id`, scopes the "already engaged" guard and the exclusive-group flip, and is the `actor` carried by the `Engaged` and `Disengaged` events. Omitting it keeps the existing behaviour; if there is no actor and nobody is authenticated, a `UserCannotEngageException` is thrown.
+
 ### Weighted Verbs & Engagement Values
 
 Engagements can carry an optional numeric **value** (a nullable signed decimal column). A Verb opts in by implementing `Cjmellor\Engageify\Contracts\HasWeight`, which derives a fixed weight per case — for example an upvote is `+1` and a downvote `-1`:
@@ -383,6 +398,8 @@ $feed->first()->is_engaged; // true/false — no extra query per row
 
 If more than one engagement row exists for the same user, target and Verb (e.g. seeded or imported data), the attached `engagement_value` is taken from the **most recent** engagement, so the value is deterministic across database engines.
 
+> This scope's parameter is named `$user` for backwards compatibility; it takes the same model you would pass as `actor:` to `engage()`.
+
 #### Fetch Users' Who Engaged
 
 Instead of just fetching the amount of engagements, you can fetch the Users who engaged.
@@ -463,7 +480,7 @@ While injection is off, the middleware is **not added to the global HTTP stack a
 
 ## Events
 
-Two generic events are dispatched for every engagement, regardless of the Verb.
+Two generic events are dispatched for every engagement, regardless of the Verb. `$actor` is whoever was passed to `engage()`/`disengage()`, falling back to the authenticated user.
 
 `Cjmellor\Engageify\Events\Engaged` is dispatched when a Model is engaged:
 
