@@ -18,7 +18,10 @@ return new class extends Migration
             $table->decimal(column: 'sum_value', total: 8, places: 2)->default(0);
             $table->timestamps();
 
-            $table->unique(columns: ['engagementable_type', 'engagementable_id', 'type']);
+            $table->unique(
+                columns: ['engagementable_type', 'engagementable_id', 'type'],
+                name: 'engagement_counters_engagementable_type_unique',
+            );
             $table->index(columns: 'type');
         });
 
