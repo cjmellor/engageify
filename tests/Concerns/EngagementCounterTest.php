@@ -93,12 +93,12 @@ test('reads return zero for a Verb with no engagements', function (): void {
         ->and($this->user->averageOf(Vote::Up))->toBe(0.0);
 });
 
-test('disengaging when nothing is engaged fires Disengaged and leaves the counter untouched', function (): void {
+test('disengaging when nothing is engaged fires no event and leaves the counter untouched', function (): void {
     Event::fake();
 
     $this->user->unlike();
 
-    Event::assertDispatched(Disengaged::class);
+    Event::assertNotDispatched(Disengaged::class);
 
     expect($this->user->likes())->toBe(0);
 
