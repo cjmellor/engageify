@@ -1,5 +1,32 @@
 # Changelog
 
+## v2.1.2 - 2026-09-22
+
+### MySQL and MariaDB support
+
+Engageify v2.0.0 through v2.1.1 could not be installed on MySQL or MariaDB at all. The unique index on `engagement_counters` was left unnamed, and the name Laravel generates for it — `engagement_counters_engagementable_type_engagementable_id_type_unique` — is 69 characters against MySQL's 64-character identifier cap, so creating the table failed outright. The index is now given an explicit name and the table builds on every supported engine.
+
+### Fixed
+
+- **Emoji Verb values no longer collapse into one counter on MySQL.** A backed enum may use an emoji as its value, which lands in the `type` column of `engagements` and `engagement_counters`. `utf8mb4_unicode_ci` gives most emoji an identical sort weight, so the unique index over that column treated an entire emoji set as a single value — one row and one counter for all of them. The column is now pinned to `utf8mb4_bin` on MySQL and MariaDB; other engines already sort emoji apart and are left alone.
+
+### Upgrading
+
+Re-publish the migrations and run them:
+
+```bash
+php artisan vendor:publish --tag="engageify-migrations"
+php artisan migrate
+
+```
+This picks up `pin_engagement_type_collation`, which converts the `type` column on both tables in place. It is a no-op on any driver other than MySQL and MariaDB. No counter rebuild is needed: because no v2 release could be installed on MySQL, there is no existing installation whose counters could have been collapsed.
+
+One behavioural note for MySQL users: `utf8mb4_bin` compares byte-exactly, so `type` is now case-sensitive. The package always writes and matches enum values verbatim, so nothing inside Engageify changes — but a query written directly against `engagements.type` with differently-cased text will no longer match.
+
+MySQL and MariaDB are not in the CI matrix; the suite runs on SQLite.
+
+**Full Changelog**: https://github.com/cjmellor/engageify/compare/v2.1.1...v2.1.2
+
 ## v2.1.1 - 2026-07-27
 
 A patch release fixing two correctness bugs in `HasEngagements`. No API or migration changes.
@@ -23,6 +50,7 @@ Engagements previously resolved the acting user from `auth()` alone, so applicat
 $post->engage(Reaction::Bookmark, actor: $user);
 $post->like(actor: $user);
 $post->unlike(actor: $user);
+
 
 
 ```
