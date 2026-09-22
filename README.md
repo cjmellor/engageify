@@ -153,6 +153,20 @@ $film->like();
 
 The registry is validated **once at boot**: every entry must be a backed enum implementing `EngagementType` (otherwise `InvalidEngagementEnum`), and their values must be **collectively unique** (otherwise `AmbiguousEngagementType`). Because the check runs at boot, swapping `engageify.types` at runtime bypasses it.
 
+#### Emoji as a Verb value
+
+A backed enum may use an emoji as its value, and the stored `type` column is collated so that MySQL and MariaDB keep each emoji apart:
+
+```php
+enum Reaction: string implements EngagementType
+{
+    case ThumbsUp = '👍';
+    case Tada = '🎉';
+}
+```
+
+MySQL's `utf8mb4_unicode_ci` gives most emoji an identical sort weight, so the unique index over `engagements.type` and `engagement_counters.type` would otherwise collapse the whole set into one counter. The `type` column is pinned to `utf8mb4_bin` on those engines; other engines are untouched. Upgrading converts existing columns in place.
+
 ### Engaging as a specific actor
 
 By default the engaging actor is `auth()->user()`. Applications where the authenticated principal is not the model that owns engagements — multi-tenant setups, impersonation, queued jobs, seeders — can pass the actor explicitly:
