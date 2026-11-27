@@ -118,7 +118,7 @@ trait HasEngagements
             );
 
             $engagement = $this->engagements()->create([
-                'user_id' => $actor->getKey(),
+                Engagement::userForeignKey() => $actor->getKey(),
                 'type' => $type,
                 'value' => $resolved,
             ]);
@@ -157,7 +157,7 @@ trait HasEngagements
 
         DB::transaction(function () use ($type, $actor): void {
             $engagements = $this->engagements()
-                ->whereUserId($actor->getKey())
+                ->where(Engagement::userForeignKey(), $actor->getKey())
                 ->whereType($type)
                 ->get();
 
@@ -165,7 +165,7 @@ trait HasEngagements
                 return;
             }
 
-            $this->engagements()->whereUserId($actor->getKey())->whereType($type)->delete();
+            $this->engagements()->where(Engagement::userForeignKey(), $actor->getKey())->whereType($type)->delete();
 
             EngagementCounter::record(
                 engageable: $this,
@@ -408,7 +408,7 @@ trait HasEngagements
             ->whereColumn('engagementable_id', $model->getQualifiedKeyName())
             ->where('engagementable_type', $model->getMorphClass())
             ->where('type', $type->value)
-            ->where('user_id', $userKey);
+            ->where(Engagement::userForeignKey(), $userKey);
     }
 
     protected function engageExclusive(EngagementType&Exclusive $type, int|float|null $value, ?Model $actor = null): Engagement
@@ -423,7 +423,7 @@ trait HasEngagements
         $actor = $this->resolveActor(actor: $actor);
 
         $existing = $this->engagements()
-            ->whereUserId($actor->getKey())
+            ->where(Engagement::userForeignKey(), $actor->getKey())
             ->whereIn('type', $this->exclusiveGroupValues(group: $type->group()))
             ->lockForUpdate()
             ->get();
@@ -445,7 +445,7 @@ trait HasEngagements
         $resolved = $this->resolveEngagementValue(type: $type, value: $value);
 
         $engagement = $this->engagements()->create([
-            'user_id' => $actor->getKey(),
+            Engagement::userForeignKey() => $actor->getKey(),
             'type' => $type,
             'value' => $resolved,
         ]);
@@ -480,7 +480,7 @@ trait HasEngagements
 
         return DB::transaction(function () use ($type, $validated, $actor): Engagement {
             $existing = $this->engagements()
-                ->whereUserId($actor->getKey())
+                ->where(Engagement::userForeignKey(), $actor->getKey())
                 ->whereType($type)
                 ->lockForUpdate()
                 ->first();
@@ -495,7 +495,7 @@ trait HasEngagements
                 $engagement = $existing;
             } else {
                 $engagement = $this->engagements()->create([
-                    'user_id' => $actor->getKey(),
+                    Engagement::userForeignKey() => $actor->getKey(),
                     'type' => $type,
                     'value' => $validated,
                 ]);
@@ -524,7 +524,7 @@ trait HasEngagements
     protected function hasEngagedWithType(EngagementType $type, ?Model $actor = null, bool $lock = false): bool
     {
         return $this->engagements()
-            ->whereUserId($this->resolveActor(actor: $actor)->getKey())
+            ->where(Engagement::userForeignKey(), $this->resolveActor(actor: $actor)->getKey())
             ->whereType($type)
             ->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())
             ->exists();

@@ -23,6 +23,11 @@ class Engagement extends Model
 
     protected $guarded = [];
 
+    public static function userForeignKey(): string
+    {
+        return config(key: 'engageify.users.foreign_key', default: 'user_id');
+    }
+
     public function engagementable(): MorphTo
     {
         return $this->morphTo();
@@ -30,7 +35,7 @@ class Engagement extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(config(key: 'engageify.users.model'));
+        return $this->belongsTo(related: config(key: 'engageify.users.model'), foreignKey: self::userForeignKey());
     }
 
     protected static function newFactory(): Factory

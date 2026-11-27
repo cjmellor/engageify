@@ -23,7 +23,7 @@ class EngagementFactory extends Factory
         return [
             'engagementable_id' => $engageable::factory(), // @phpstan-ignore staticMethod.notFound
             'engagementable_type' => (new $engageable)->getMorphClass(),
-            'user_id' => $engageable::factory(), // @phpstan-ignore staticMethod.notFound
+            Engagement::userForeignKey() => $engageable::factory(), // @phpstan-ignore staticMethod.notFound
         ];
     }
 
