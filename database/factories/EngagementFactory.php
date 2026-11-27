@@ -7,6 +7,7 @@ namespace Cjmellor\Engageify\Database\Factories;
 use Cjmellor\Engageify\Models\Engagement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
+use LogicException;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Cjmellor\Engageify\Models\Engagement>
@@ -23,10 +24,12 @@ class EngagementFactory extends Factory
         /** @var class-string<Model> $engageable */
         $engageable = config(key: 'engageify.users.model');
 
+        throw_unless(method_exists($engageable, 'factory'), LogicException::class, "The engageify.users.model [{$engageable}] must use the HasFactory trait.");
+
         return [
-            'engagementable_id' => $engageable::factory(), // @phpstan-ignore staticMethod.notFound
+            'engagementable_id' => $engageable::factory(),
             'engagementable_type' => (new $engageable)->getMorphClass(),
-            'user_id' => $engageable::factory(), // @phpstan-ignore staticMethod.notFound
+            Engagement::userForeignKey() => $engageable::factory(),
         ];
     }
 

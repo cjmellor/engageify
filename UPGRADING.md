@@ -1,5 +1,22 @@
 # Upgrading
 
+## From v2.1 to v2.2: recompute hot scores
+
+v2.2.0 fixes how `hot()` ranks. `hot_score` is now computed from an
+item's **net score across all of its weighted Verbs** (so downvotes cool an item
+down, and ratings no longer count as votes). An item with engagements but a net
+score of zero — only likes, or as many downvotes as upvotes — keeps its age term
+instead of dropping to `0`. Scores already stored were computed per Verb and
+stay stale until the next engagement on each item, so rebuild them once after
+updating:
+
+```bash
+php artisan engageify:recount
+```
+
+There is no migration to run. The command rebuilds engagement counters from the
+`engagements` table and leaves view and impression counts as they are.
+
 ## From v1 to v2
 
 v2 reworks how engagement counts are stored and read, and removes the cache

@@ -369,14 +369,16 @@ For Reddit-style ranking:
 // Hot — net score balanced against age (stored, time-anchored; no cron)
 Post::query()->hot()->get();
 
-// Top — items created within a window, ranked by net score ('all' = no window)
+// Top — items created within a window, ranked by net vote score ('all' = no window)
 Post::query()->top('week')->get();
 
 // Bayesian — honest average that pulls low-count items toward the global mean
 Film::query()->orderByBayesian(Rating::Stars)->get();
 ```
 
-`hot_score` is stored on the counter and recomputed in the same transaction whenever an item's net score changes. All counter columns (`hot_score`, `sum_value`, `count`) plus the engageable's `created_at` are queryable, so a bespoke ranking (e.g. "controversial") is a normal one-line scope. All scopes accept a direction (`'desc'` by default).
+The **net score** behind `hot()` and `top()` is the sum of every weighted (`HasWeight`) Verb on the item; ratings are left out, so a five-star rating never counts as five upvotes. An item with engagements but a net score of zero (only likes, say, or one upvote and one downvote) still ranks in `hot()` by its age alone.
+
+`hot_score` is stored on the counter and recomputed in the same transaction as every engage/disengage/flip. All counter columns (`hot_score`, `sum_value`, `count`) plus the engageable's `created_at` are queryable, so a bespoke ranking (e.g. "controversial") is a normal one-line scope. All scopes accept a direction (`'desc'` by default).
 
 ### Actor-Side Queries
 
@@ -472,7 +474,14 @@ A *view* is server-detectable; an *impression* (was the element actually on scre
 </article>
 ```
 
-A browser posts that token to the impression endpoint (default `POST /engageify/impressions`), which **verifies the signature** before counting — so only server-rendered, unexpired elements can report an impression. It's layered with the same fingerprint dedup as views — on its own `engageify.impressions.cooldown` window — and is route-throttled. Forged, tampered, or expired tokens are rejected without counting. Impressions accumulate on the same count-only counter (no per-impression rows).
+A browser posts that token to the impression endpoint (default `POST /engageify/impressions`), which **verifies the signature** before counting — so only server-rendered, unexpired elements can report an impression. It's layered with the same fingerprint dedup as views — on its own `engageify.impressions.cooldown` window — and is route-throttled. The endpoint is stateless (no session), so the signed-in user's id is embedded in the token when `@impression` renders; a page rendered for a guest falls back to the IP + user agent hash. Forged, tampered, or expired tokens are rejected without counting. Impressions accumulate on the same count-only counter (no per-impression rows), which you read through the `HasViews` trait:
+
+```php
+$thread->impressionCount();                           // lifetime total
+Thread::query()->orderByMostImpressions()->get();     // most seen first
+```
+
+> **Don't full-page cache `@impression` markup for signed-in users.** The token names the viewer it was rendered for, so a cached copy served to someone else is deduplicated as the original viewer.
 
 > **Operational note — token signing & `APP_KEY`.** Impression tokens are signed with your `APP_KEY`, so **rotating the key invalidates every outstanding token**: pages rendered before the rotation get a `403` from the endpoint until they re-render with freshly signed tokens. Tokens also carry a TTL (`engageify.impressions.token_ttl`, default `86400` — 24h), so a token can outlive a deploy and keep counting until it expires. Size the TTL against how long a rendered page may realistically stay open.
 
@@ -516,7 +525,7 @@ public EngagementType $type,
 # Testing
 
 ```
-composer pest
+vendor/bin/pest
 ```
 
 # Changelog

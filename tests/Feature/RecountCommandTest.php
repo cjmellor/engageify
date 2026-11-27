@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Cjmellor\Engageify\Models\EngagementCounter;
+use Cjmellor\Engageify\Support\ImpressionRecorder;
 use Cjmellor\Engageify\Tests\Fixtures\Enums\Vote;
 
 test('engageify:recount rebuilds the counters from the source rows', function (): void {
@@ -19,6 +20,23 @@ test('engageify:recount rebuilds the counters from the source rows', function ()
 
     expect($this->user->engagementCount(Vote::Up))->toBe(2)
         ->and($this->user->score(Vote::Up))->toBe(2.0);
+});
+
+test('engageify:recount keeps view and impression counts, which have no source rows', function (): void {
+    $this->actingAs($this->user);
+
+    $this->user->like();
+    $this->user->recordView();
+
+    ImpressionRecorder::record(morphType: $this->user->getMorphClass(), morphId: $this->user->id);
+
+    $impressions = fn (): int => (int) $this->user->engagementCounters()->where('type', ImpressionRecorder::TYPE)->sum('count');
+
+    $this->artisan('engageify:recount')->assertSuccessful();
+
+    expect($this->user->viewCount())->toBe(1)
+        ->and($impressions())->toBe(1)
+        ->and($this->user->likes())->toBe(1);
 });
 
 test('engageify:recount recomputes hot_score so hot ranking survives a backfill', function (): void {

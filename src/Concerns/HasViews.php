@@ -7,6 +7,7 @@ namespace Cjmellor\Engageify\Concerns;
 use Cjmellor\Engageify\Exceptions\InvalidViewPeriodException;
 use Cjmellor\Engageify\Models\EngagementCounter;
 use Cjmellor\Engageify\Models\ViewBucket;
+use Cjmellor\Engageify\Support\ImpressionRecorder;
 use Cjmellor\Engageify\Support\ViewRecorder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -30,11 +31,12 @@ trait HasViews
 
     public function viewCount(): int
     {
-        return (int) EngagementCounter::query()
-            ->where('engagementable_type', $this->getMorphClass())
-            ->where('engagementable_id', $this->getKey())
-            ->where('type', ViewRecorder::TYPE)
-            ->sum(column: 'count');
+        return $this->counterTotal(type: ViewRecorder::TYPE);
+    }
+
+    public function impressionCount(): int
+    {
+        return $this->counterTotal(type: ImpressionRecorder::TYPE);
     }
 
     public function viewsInLast(int $days): int
@@ -52,23 +54,11 @@ trait HasViews
      */
     protected function scopeOrderByMostViewed(Builder $query, ?string $period = null, string $direction = 'desc'): Builder
     {
-        $model = $query->getModel();
-
         if ($period === null) {
-            return $query
-                ->leftJoinSub(
-                    EngagementCounter::query()
-                        ->select(['engagementable_id', 'count'])
-                        ->where('engagementable_type', $model->getMorphClass())
-                        ->where('type', ViewRecorder::TYPE),
-                    'view_totals',
-                    'view_totals.engagementable_id',
-                    '=',
-                    $model->getQualifiedKeyName(),
-                )
-                ->orderBy('view_totals.count', $direction)
-                ->select("{$model->getTable()}.*");
+            return $this->orderByCounterTotal(query: $query, type: ViewRecorder::TYPE, direction: $direction);
         }
+
+        $model = $query->getModel();
 
         return $query
             ->leftJoinSub(
@@ -83,6 +73,48 @@ trait HasViews
                 $model->getQualifiedKeyName(),
             )
             ->orderBy('view_window.views', $direction)
+            ->select("{$model->getTable()}.*");
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function scopeOrderByMostImpressions(Builder $query, string $direction = 'desc'): Builder
+    {
+        return $this->orderByCounterTotal(query: $query, type: ImpressionRecorder::TYPE, direction: $direction);
+    }
+
+    protected function counterTotal(string $type): int
+    {
+        return (int) EngagementCounter::query()
+            ->where('engagementable_type', $this->getMorphClass())
+            ->where('engagementable_id', $this->getKey())
+            ->where('type', $type)
+            ->sum(column: 'count');
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    protected function orderByCounterTotal(Builder $query, string $type, string $direction): Builder
+    {
+        $model = $query->getModel();
+        $alias = "{$type}_totals";
+
+        return $query
+            ->leftJoinSub(
+                EngagementCounter::query()
+                    ->select(['engagementable_id', 'count'])
+                    ->where('engagementable_type', $model->getMorphClass())
+                    ->where('type', $type),
+                $alias,
+                "{$alias}.engagementable_id",
+                '=',
+                $model->getQualifiedKeyName(),
+            )
+            ->orderBy("{$alias}.count", $direction)
             ->select("{$model->getTable()}.*");
     }
 

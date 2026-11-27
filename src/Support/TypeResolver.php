@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Cjmellor\Engageify\Support;
 
 use Cjmellor\Engageify\Contracts\EngagementType;
+use Cjmellor\Engageify\Contracts\HasWeight;
+use Cjmellor\Engageify\Contracts\Rateable;
 use Cjmellor\Engageify\Exceptions\AmbiguousEngagementType;
 use Cjmellor\Engageify\Exceptions\InvalidEngagementEnum;
 use Cjmellor\Engageify\Exceptions\UnknownEngagementType;
@@ -20,6 +22,19 @@ class TypeResolver
         $types = config(key: 'engageify.types');
 
         return is_array($types) ? array_values($types) : [$types];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function weightedValues(): array
+    {
+        return collect(self::enums())
+            ->flatMap(fn (string $enum): array => $enum::cases())
+            ->filter(fn (EngagementType $case): bool => $case instanceof HasWeight && ! $case instanceof Rateable)
+            ->map(fn (EngagementType $case): string => (string) $case->value)
+            ->values()
+            ->all();
     }
 
     /**

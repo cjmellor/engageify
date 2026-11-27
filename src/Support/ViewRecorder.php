@@ -13,7 +13,7 @@ use Throwable;
 
 class ViewRecorder
 {
-    public const TYPE = 'view';
+    public const string TYPE = 'view';
 
     public static function record(Model $viewable): void
     {

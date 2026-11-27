@@ -1,0 +1,49 @@
+name: "Run Quality Checks"
+on:
+  push:
+    branches:
+      - main
+      - "1.x"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Rector
+            command: vendor/bin/rector --dry-run
+            coverage: none
+          - name: PHPStan
+            command: composer test:types
+            coverage: none
+          - name: Type coverage
+            command: composer test:type-coverage
+            coverage: none
+          - name: Line coverage
+            command: composer test:unit
+            coverage: pcov
+
+    name: ${{ matrix.name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          coverage: ${{ matrix.coverage }}
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction
+
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.command }}

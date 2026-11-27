@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Cjmellor\Engageify\Enums\EngagementTypes;
 use Cjmellor\Engageify\Models\Engagement;
+use Cjmellor\Engageify\Models\EngagementCounter;
 use Cjmellor\Engageify\Tests\Fixtures\User;
 
 it('builds a persistable engagement from the configured user model', function (): void {
@@ -24,4 +25,11 @@ it('honours the configured user model rather than a hardcoded fixture', function
 
     expect($engagement->engagementable_type)->toBe((new User)->getMorphClass())
         ->and(User::query()->whereKey($engagement->user_id)->exists())->toBeTrue();
+});
+
+it('names the misconfigured user model when it has no factory', function (): void {
+    config()->set('engageify.users.model', EngagementCounter::class);
+
+    expect(fn () => Engagement::factory()->like()->make())
+        ->toThrow(LogicException::class, EngagementCounter::class);
 });

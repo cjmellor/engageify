@@ -17,7 +17,7 @@ trait EngagesWith
      */
     public function engagements(): HasMany
     {
-        return $this->hasMany(related: Engagement::class, foreignKey: 'user_id');
+        return $this->hasMany(related: Engagement::class, foreignKey: Engagement::userForeignKey());
     }
 
     public function hasEngaged(Model $target, EngagementType $type): bool
@@ -43,7 +43,7 @@ trait EngagesWith
     protected function engagementQueryFor(Model $target, EngagementType $type): Builder
     {
         return Engagement::query()
-            ->where('user_id', $this->getKey())
+            ->where(Engagement::userForeignKey(), $this->getKey())
             ->where('engagementable_type', $target->getMorphClass())
             ->where('engagementable_id', $target->getKey())
             ->where('type', $type->value);
