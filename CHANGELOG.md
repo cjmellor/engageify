@@ -1,5 +1,61 @@
 # Changelog
 
+## v2.2.0 - 2026-11-27
+
+### Ranking that matches the docs
+
+`hot()` and `top()` are documented as ranking by net score, but neither did.
+
+`hot_score` was computed per Verb and `hot()` took the highest one, so downvotes never cooled an item: 50 up and 49 down ranked the same as 50 up and 0 down. It is now computed from the item's net score across its weighted (`HasWeight`) Verbs.
+
+- **Ratings no longer count as votes.** `hot()` and `top()` leave `Rateable` Verbs out, so a five-star rating is not five upvotes.
+- **Engaged items with a net score of zero rank by age.** An item with only likes, or with as many downvotes as upvotes, used to score `0` and sink below everything.
+- **Items with no engagements score `0`.** That covers an item whose engagements were all withdrawn and one never engaged at all; `hot()` now sorts both the same on every database.
+
+Engaging is also cheaper. The counter update reads the item's counter rows once and writes once: a like goes from 5 queries to 4, and a vote from 7 to 5.
+
+#### Added
+
+- **Reading impressions.** `HasViews` gains `impressionCount()` and an `orderByMostImpressions()` scope. Impressions were recorded but there was no way to read them.
+
+  ```php
+  $thread->impressionCount();
+  Thread::query()->orderByMostImpressions()->get();
+  ```
+
+#### Fixed
+
+- **`engageify:recount` no longer wipes view and impression counts.** It deleted every counter row and rebuilt from `engagements`, but views and impressions have no rows there, so running the documented command zeroed them for good.
+- **`engageify.users.foreign_key` is honoured everywhere.** The migration created the configured column, but every read and write used `user_id`, so any other value broke every engage call.
+- **Impressions are deduplicated per signed-in user.** The impression endpoint has no session, so signed-in viewers were deduplicated by IP and user agent. The viewer's id is now embedded in the signed token when `@impression` renders. Guests still fall back to the IP and user agent hash.
+- **`EngagementFactory` names a misconfigured user model.** If `engageify.users.model` has no `factory()`, it throws a `LogicException` naming the config key instead of a fatal "undefined method".
+
+#### Upgrading
+
+Stored `hot_score` values were computed per Verb, so rebuild them once after updating:
+
+```bash
+php artisan engageify:recount
+```
+
+There is no migration to run, and the command now keeps your view and impression counts.
+
+Things to check in your own code:
+
+- **Ranking order changes.** Anything that depends on the old `hot()` or `top()` order will see a different one.
+- **`ImpressionToken::verify()` returns a third key, `viewer`.** Code comparing its result to an exact array needs updating. Tokens rendered before the upgrade still verify, as guests.
+- **Do not full-page cache `@impression` markup for signed-in users.** The token names the viewer it was rendered for, so a cached copy served to someone else is counted as the original viewer.
+- **An engage now locks all of the item's counter rows**, not only the row for its Verb, so simultaneous engagements on one item with different Verbs wait on each other.
+
+#### Maintenance
+
+- Rector, PHPStan, type coverage and 100% line coverage now run in CI.
+- Development dependencies and GitHub Actions were updated. These are development-only; the package still requires only `illuminate/database` and `illuminate/support`.
+
+MySQL, MariaDB and PostgreSQL are not in the CI matrix; the suite runs on SQLite.
+
+**Full Changelog**: https://github.com/cjmellor/engageify/compare/v2.1.2...v2.2.0
+
 ## v2.1.2 - 2026-09-22
 
 ### MySQL and MariaDB support
