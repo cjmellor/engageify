@@ -3,12 +3,11 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
-use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
 use RectorLaravel\Rector\Class_\DescriptionPropertyToDescriptionAttributeRector;
+use RectorLaravel\Rector\Class_\EmptyGuardedPropertyToUnguardedAttributeRector;
 use RectorLaravel\Rector\Class_\SignaturePropertyToSignatureAttributeRector;
 use RectorLaravel\Rector\FuncCall\RemoveDumpDataDeadCodeRector;
 use RectorLaravel\Set\LaravelSetList;
-use RectorLaravel\Set\LaravelSetProvider;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -18,7 +17,7 @@ return RectorConfig::configure()
         __DIR__.'/tests',
     ])
     ->withSkip([
-        AddOverrideAttributeToOverriddenMethodsRector::class,
+        EmptyGuardedPropertyToUnguardedAttributeRector::class,
         SignaturePropertyToSignatureAttributeRector::class,
         DescriptionPropertyToDescriptionAttributeRector::class,
     ])
@@ -27,10 +26,8 @@ return RectorConfig::configure()
         codeQuality: true,
         typeDeclarations: true,
         privatization: true,
-        earlyReturn: true,
     )
     ->withPhpSets(php83: true)
-    ->withSetProviders(LaravelSetProvider::class)
     ->withComposerBased(laravel: true)
     ->withSets([
         LaravelSetList::LARAVEL_CODE_QUALITY,
