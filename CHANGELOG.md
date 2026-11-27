@@ -2,7 +2,7 @@
 
 ## v2.2.0 - 2026-11-27
 
-## Ranking that matches the docs
+### Ranking that matches the docs
 
 `hot()` and `top()` are documented as ranking by net score, but neither did.
 
@@ -14,7 +14,7 @@
 
 Engaging is also cheaper. The counter update reads the item's counter rows once and writes once: a like goes from 5 queries to 4, and a vote from 7 to 5.
 
-### Added
+#### Added
 
 - **Reading impressions.** `HasViews` gains `impressionCount()` and an `orderByMostImpressions()` scope. Impressions were recorded but there was no way to read them.
 
@@ -23,14 +23,14 @@ Engaging is also cheaper. The counter update reads the item's counter rows once 
   Thread::query()->orderByMostImpressions()->get();
   ```
 
-### Fixed
+#### Fixed
 
 - **`engageify:recount` no longer wipes view and impression counts.** It deleted every counter row and rebuilt from `engagements`, but views and impressions have no rows there, so running the documented command zeroed them for good.
 - **`engageify.users.foreign_key` is honoured everywhere.** The migration created the configured column, but every read and write used `user_id`, so any other value broke every engage call.
 - **Impressions are deduplicated per signed-in user.** The impression endpoint has no session, so signed-in viewers were deduplicated by IP and user agent. The viewer's id is now embedded in the signed token when `@impression` renders. Guests still fall back to the IP and user agent hash.
 - **`EngagementFactory` names a misconfigured user model.** If `engageify.users.model` has no `factory()`, it throws a `LogicException` naming the config key instead of a fatal "undefined method".
 
-### Upgrading
+#### Upgrading
 
 Stored `hot_score` values were computed per Verb, so rebuild them once after updating:
 
@@ -47,7 +47,7 @@ Things to check in your own code:
 - **Do not full-page cache `@impression` markup for signed-in users.** The token names the viewer it was rendered for, so a cached copy served to someone else is counted as the original viewer.
 - **An engage now locks all of the item's counter rows**, not only the row for its Verb, so simultaneous engagements on one item with different Verbs wait on each other.
 
-### Maintenance
+#### Maintenance
 
 - Rector, PHPStan, type coverage and 100% line coverage now run in CI.
 - Development dependencies and GitHub Actions were updated. These are development-only; the package still requires only `illuminate/database` and `illuminate/support`.
