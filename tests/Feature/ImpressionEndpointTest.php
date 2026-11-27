@@ -27,7 +27,7 @@ test('@impression renders a data attribute carrying a valid signed token', funct
 
     preg_match('/data-engageify-impression="([^"]+)"/', $html, $matches);
 
-    expect(ImpressionToken::verify($matches[1]))->toBe(['type' => $model->getMorphClass(), 'id' => (string) $model->id]);
+    expect(ImpressionToken::verify($matches[1]))->toBe(['type' => $model->getMorphClass(), 'id' => (string) $model->id, 'viewer' => null]);
 });
 
 test('the endpoint accepts a valid token and counts one impression', function (): void {
@@ -47,6 +47,26 @@ test('the endpoint dedups repeat impressions within the cooldown', function (): 
     $this->postJson(route('engageify.impressions'), ['token' => $token])->assertNoContent();
 
     expect(impressionCount($model))->toBe(1);
+});
+
+test('the endpoint dedups by the signed-in viewer the token was rendered for, not by IP', function (): void {
+    $model = User::factory()->createOne();
+    $viewerA = User::factory()->createOne();
+    $viewerB = User::factory()->createOne();
+
+    $this->actingAs($viewerA);
+    $tokensForA = [ImpressionToken::generate($model, 3600), ImpressionToken::generate($model, 7200)];
+
+    $this->actingAs($viewerB);
+    $tokenForB = ImpressionToken::generate($model, 3600);
+
+    auth()->forgetGuards();
+
+    foreach ([...$tokensForA, $tokenForB] as $token) {
+        $this->postJson(route('engageify.impressions'), ['token' => $token])->assertNoContent();
+    }
+
+    expect(impressionCount($model))->toBe(2);
 });
 
 test('the endpoint rejects a forged token without counting', function (): void {

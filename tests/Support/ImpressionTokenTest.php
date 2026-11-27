@@ -10,7 +10,15 @@ test('a generated token verifies and returns the model type and id', function ()
 
     $verified = ImpressionToken::verify(ImpressionToken::generate($model, 3600));
 
-    expect($verified)->toBe(['type' => $model->getMorphClass(), 'id' => (string) $model->id]);
+    expect($verified)->toBe(['type' => $model->getMorphClass(), 'id' => (string) $model->id, 'viewer' => null]);
+});
+
+test('a token generated for a signed-in viewer carries their id', function (): void {
+    $model = User::factory()->createOne();
+
+    $this->actingAs($this->user);
+
+    expect(ImpressionToken::verify(ImpressionToken::generate($model, 3600))['viewer'])->toBe((string) $this->user->id);
 });
 
 test('a tampered token is rejected', function (): void {

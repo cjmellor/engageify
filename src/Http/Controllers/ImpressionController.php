@@ -17,7 +17,7 @@ class ImpressionController
 
         abort_if($verified === null, code: Response::HTTP_FORBIDDEN);
 
-        ImpressionRecorder::record(morphType: $verified['type'], morphId: $verified['id']);
+        ImpressionRecorder::record(morphType: $verified['type'], morphId: $verified['id'], viewerId: $verified['viewer']);
 
         return response()->noContent();
     }

@@ -10,7 +10,7 @@ class ImpressionToken
 {
     public static function generate(Model $model, int $ttl): string
     {
-        $payload = $model->getMorphClass().'|'.$model->getKey().'|'.(now()->getTimestamp() + $ttl);
+        $payload = $model->getMorphClass().'|'.$model->getKey().'|'.(now()->getTimestamp() + $ttl).'|'.auth()->id();
 
         return self::encode(value: $payload).'.'.self::sign(payload: $payload);
     }
@@ -23,7 +23,7 @@ class ImpressionToken
     }
 
     /**
-     * @return array{type: string, id: string}|null
+     * @return array{type: string, id: string, viewer: string|null}|null
      */
     public static function verify(string $token): ?array
     {
@@ -35,13 +35,13 @@ class ImpressionToken
             return null;
         }
 
-        [$type, $id, $expiresAt] = array_pad(explode('|', $payload, 3), 3, '');
+        [$type, $id, $expiresAt, $viewer] = array_pad(explode('|', $payload, 4), 4, '');
 
         if ($type === '' || $id === '' || $expiresAt === '' || (int) $expiresAt < now()->getTimestamp()) {
             return null;
         }
 
-        return ['type' => $type, 'id' => $id];
+        return ['type' => $type, 'id' => $id, 'viewer' => $viewer === '' ? null : $viewer];
     }
 
     private static function sign(string $payload): string

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Cjmellor\Engageify\Exceptions\InvalidViewPeriodException;
 use Cjmellor\Engageify\Models\Engagement;
 use Cjmellor\Engageify\Models\ViewBucket;
+use Cjmellor\Engageify\Support\ImpressionRecorder;
 use Cjmellor\Engageify\Tests\Fixtures\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
@@ -197,4 +198,28 @@ test('orderByMostViewed with a period ranks by views within the window only', fu
     $ordered = User::query()->whereIn('id', [$popular->id, $quiet->id])->orderByMostViewed('week')->pluck('id');
 
     expect($ordered->all())->toBe([$popular->id, $quiet->id]);
+});
+
+test('impressionCount and orderByMostImpressions read the impression counter, separately from views', function (): void {
+    $seen = User::factory()->createOne();
+    $glanced = User::factory()->createOne();
+    $unseen = User::factory()->createOne();
+
+    $this->actingAs($this->user);
+    $glanced->recordView();
+    ImpressionRecorder::record(morphType: $glanced->getMorphClass(), morphId: $glanced->id);
+
+    foreach (User::factory()->count(2)->create() as $viewer) {
+        $this->actingAs($viewer);
+        ImpressionRecorder::record(morphType: $seen->getMorphClass(), morphId: $seen->id);
+    }
+
+    $ids = [$seen->id, $glanced->id, $unseen->id];
+
+    expect($seen->impressionCount())->toBe(2)
+        ->and($glanced->impressionCount())->toBe(1)
+        ->and($unseen->impressionCount())->toBe(0)
+        ->and($seen->viewCount())->toBe(0)
+        ->and(User::query()->whereIn('id', $ids)->orderByMostImpressions()->pluck('id')->all())->toBe($ids)
+        ->and(User::query()->whereIn('id', $ids)->orderByMostImpressions('asc')->pluck('id')->last())->toBe($seen->id);
 });

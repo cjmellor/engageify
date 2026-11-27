@@ -11,10 +11,10 @@ class ImpressionRecorder
 {
     public const TYPE = 'impression';
 
-    public static function record(string $morphType, int|string $morphId): void
+    public static function record(string $morphType, int|string $morphId, int|string|null $viewerId = null): void
     {
         $fingerprint = Fingerprint::make(
-            userId: auth()->id(),
+            userId: $viewerId ?? auth()->id(),
             ip: request()->ip(),
             userAgent: request()->userAgent(),
         );
