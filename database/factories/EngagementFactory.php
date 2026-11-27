@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Cjmellor\Engageify\Models\Engagement>
+ */
 class EngagementFactory extends Factory
 {
     protected $model = Engagement::class;
