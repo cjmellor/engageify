@@ -548,7 +548,7 @@ trait HasEngagements
                 ->whereType($type)
                 ->get()
                 ->pluck('user')
-                ->when(config(key: 'engageify.allow_multiple_engagements'), fn ($users) => $users->unique());
+                ->when(config(key: 'engageify.allow_multiple_engagements'), fn (Collection $users): Collection => $users->unique());
         }
 
         return $this->counterCount(type: $type);

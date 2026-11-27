@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ImpressionRecorder
 {
-    public const TYPE = 'impression';
+    public const string TYPE = 'impression';
 
     public static function record(string $morphType, int|string $morphId, int|string|null $viewerId = null): void
     {
