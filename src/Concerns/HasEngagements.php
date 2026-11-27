@@ -315,7 +315,7 @@ trait HasEngagements
                 '=',
                 $model->getQualifiedKeyName(),
             )
-            ->orderBy('engagement_hot.hot_score', $direction)
+            ->orderBy(DB::raw('coalesce(engagement_hot.hot_score, 0)'), $direction)
             ->select("{$model->getTable()}.*");
     }
 
@@ -336,6 +336,7 @@ trait HasEngagements
                 EngagementCounter::query()
                     ->selectRaw('engagementable_id, sum(sum_value) as top_score')
                     ->where('engagementable_type', $model->getMorphClass())
+                    ->whereIn('type', TypeResolver::weightedValues())
                     ->groupBy('engagementable_id'),
                 'engagement_top',
                 'engagement_top.engagementable_id',
