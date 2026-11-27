@@ -1,8 +1,8 @@
 # Upgrading
 
-## Within v2: recompute hot scores (after v2.1.2)
+## From v2.1 to v2.2: recompute hot scores
 
-Releases after v2.1.2 fix how `hot()` ranks. `hot_score` is now computed from an
+v2.2.0 fixes how `hot()` ranks. `hot_score` is now computed from an
 item's **net score across all of its weighted Verbs** (so downvotes cool an item
 down, and ratings no longer count as votes). An item with engagements but a net
 score of zero — only likes, or as many downvotes as upvotes — keeps its age term
